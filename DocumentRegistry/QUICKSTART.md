@@ -44,7 +44,9 @@ cp .env.local.example .env.local
 
 Editar `.env.local` y agregar:
 ```env
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x...  # Dirección del contrato desplegado
+NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8545
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
+NEXT_PUBLIC_DEFAULT_MNEMONIC=test test test test test test test test test test test junk
 ```
 
 ### 4. Iniciar Frontend (Terminal 3)
