@@ -9,19 +9,24 @@ Sistema completo de registro y verificación de documentos mediante firma de has
 - ✅ Verificación de autenticidad de documentos
 - ✅ Historial completo de firmas por address
 - ✅ Cumple con estándares de seguridad de la industria
-- ✅ Sin campos redundantes (no `exists`, no `hashExists` mapping)
+- ✅ Usa ECDSA de OpenZeppelin (previene signature malleability)
+- ✅ Estructura `Document` completa con hash, timestamp, signer y signature
+- ✅ Sin campos redundantes (verificación con `signer != address(0)`)
 - ✅ Tests completos con cobertura >80%
 - ✅ ABI exportado para integración con frontend
 
 ### Frontend
 - ✅ Interfaz moderna y responsiva con Tailwind CSS
 - ✅ Sistema de tabs: Sign, Verify, History
-- ✅ Context Provider para gestión de wallets
-- ✅ Wallets derivadas desde mnemonic (simulación MetaMask)
-- ✅ Componente FileUploader con drag & drop
-- ✅ Componente DocumentSigner con alerts
+- ✅ MetaMaskContext para gestión de wallets (simulación MetaMask)
+- ✅ Wallets derivadas dinámicamente desde mnemonic
+- ✅ JsonRpcProvider (no requiere MetaMask real)
+- ✅ Confirmación del browser antes de firmar (simula MetaMask)
+- ✅ Componente FileUploader con drag & drop y validación de tamaño
+- ✅ Componente DocumentSigner con alerts y validación previa
 - ✅ Componente DocumentVerifier funcional
-- ✅ Componente DocumentHistory mostrando datos completos
+- ✅ Componente DocumentHistory mostrando hash, signer y timestamp
+- ✅ Validación de documentos antes de firmar (previene duplicados)
 - ✅ Manejo completo de errores y excepciones
 - ✅ Dark mode support
 
@@ -174,11 +179,12 @@ http://localhost:3000
 
 1. Conectar una wallet desde el selector en la barra lateral
 2. Ir a la pestaña "Sign Document"
-3. Arrastrar y soltar un archivo o hacer clic para seleccionarlo
+3. Arrastrar y soltar un archivo o hacer clic para seleccionarlo (máximo 10MB)
 4. El sistema calculará automáticamente el hash SHA-256
-5. Hacer clic en "Sign Document"
-6. Confirmar la transacción (simulada)
-7. El documento quedará registrado en la blockchain
+5. El sistema validará que el documento no haya sido firmado previamente
+6. Hacer clic en "Sign Document"
+7. Confirmar la firma en el alert del browser (simula MetaMask)
+8. El documento quedará registrado en la blockchain
 
 ### Verificar un Documento
 
@@ -193,7 +199,7 @@ http://localhost:3000
 1. Conectar una wallet
 2. Ir a la pestaña "History"
 3. Ver todos los documentos firmados por esa wallet
-4. Cada entrada muestra: hash, timestamp, signer y signature
+4. Cada entrada muestra: hash completo, signer address completo y timestamp de cuando fue firmado
 
 ## 🧪 Testing
 
@@ -238,13 +244,15 @@ forge coverage
    - Verificación antes de almacenar
 
 3. **Verificación de Firmas:**
-   - Uso de `ecrecover` para validar firmas ECDSA
+   - Uso de ECDSA de OpenZeppelin para validar firmas
+   - Previene signature malleability (valida valor de `s`)
    - Verificación del prefijo Ethereum Signed Message
+   - Validación automática de longitud y formato de firma
 
 4. **Sin Campos Redundantes:**
    - No se usa `exists` boolean
    - No se usa `hashExists` mapping
-   - Se verifica directamente el timestamp
+   - Se verifica directamente con `signer != address(0)`
 
 ## 📚 Arquitectura Técnica
 
@@ -254,34 +262,38 @@ forge coverage
 
 - `signDocument(bytes32, bytes)`: Firma un documento
 - `verifyDocument(bytes32, address)`: Verifica un documento
-- `getSignature(bytes32)`: Obtiene información de una firma
+- `getDocument(bytes32)`: Obtiene el struct Document completo (recomendado)
+- `getSignature(bytes32)`: Obtiene información de una firma (compatibilidad)
 - `getSignerHistory(address)`: Obtiene historial de un signer
 - `getSignerCount(address)`: Obtiene conteo de firmas
 
 **Estructura de Datos:**
 ```solidity
-struct DocumentSignature {
+struct Document {
     bytes32 hash;
     uint256 timestamp;
-    bytes signature;
     address signer;
+    bytes signature;
 }
 ```
 
 ### Frontend
 
 **Arquitectura:**
-- **Context API**: Gestión de estado de wallets
+- **MetaMaskContext**: Gestión de estado de wallets (simulación MetaMask)
+- **JsonRpcProvider**: Conexión a Anvil sin necesidad de MetaMask real
 - **Custom Hooks**: `useContract` para interacción con blockchain
 - **Componentes Modulares**: Separación de responsabilidades
 - **TypeScript**: Type safety en todo el código
 
 **Flujo de Firma:**
-1. Usuario sube archivo
+1. Usuario sube archivo (validación de tamaño máximo 10MB)
 2. Frontend calcula hash SHA-256
-3. Wallet firma el hash
-4. Transacción enviada a blockchain
-5. Contrato valida y almacena
+3. Frontend valida que el documento no haya sido firmado previamente
+4. Se muestra alerta del browser para confirmar la firma (simula MetaMask)
+5. Wallet firma el hash después de confirmación
+6. Transacción enviada a blockchain
+7. Contrato valida y almacena usando ECDSA de OpenZeppelin
 
 ## 🐛 Manejo de Errores
 
@@ -289,12 +301,14 @@ El frontend maneja los siguientes errores:
 
 - ❌ Wallet no conectada
 - ❌ Hash vacío
-- ❌ Hash ya firmado
+- ❌ Hash ya firmado (validación previa antes de firmar)
 - ❌ Firma inválida
 - ❌ Documento no encontrado
 - ❌ Address inválido
 - ❌ Error de red/blockchain
 - ❌ Error al procesar archivo
+- ❌ Archivo demasiado grande (>10MB)
+- ❌ Usuario rechazó la firma
 
 Todos los errores se muestran con alerts informativos al usuario.
 

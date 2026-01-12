@@ -61,8 +61,10 @@ Abrir `http://localhost:3000` en el navegador.
 1. **Conectar Wallet:** Seleccionar una wallet del selector en la barra lateral
 2. **Firmar Documento:** 
    - Ir a pestaña "Sign Document"
-   - Subir un archivo
+   - Subir un archivo (máximo 10MB)
+   - El sistema validará que no haya sido firmado previamente
    - Hacer clic en "Sign Document"
+   - Confirmar la firma en el alert del browser
 3. **Verificar Documento:**
    - Ir a pestaña "Verify Document"
    - Subir el mismo archivo
@@ -71,6 +73,7 @@ Abrir `http://localhost:3000` en el navegador.
 4. **Ver Historial:**
    - Ir a pestaña "History"
    - Ver todos los documentos firmados
+   - Muestra: hash completo, signer address completo y timestamp
 
 ## 🧪 Ejecutar Tests
 
@@ -89,8 +92,11 @@ forge coverage
 
 - **Anvil debe estar corriendo** antes de desplegar o usar el frontend
 - **La dirección del contrato** debe actualizarse en `.env.local` después de cada despliegue
-- **Las wallets** son simuladas (no son MetaMask real)
+- **Las wallets** son simuladas usando MetaMaskContext (no requiere MetaMask real)
 - **Los fondos** en Anvil son ilimitados para desarrollo
+- **Las wallets se fondean automáticamente** al iniciar el frontend
+- **Confirmación del browser** se muestra antes de firmar (simula MetaMask)
+- **Validación previa** verifica que el documento no haya sido firmado antes de solicitar confirmación
 
 ## 🐛 Solución de Problemas
 
@@ -102,9 +108,15 @@ forge coverage
 ### Error: "Wallet not connected"
 - Seleccionar una wallet del selector en la barra lateral
 
-### Error: "Hash already signed"
+### Error: "Hash already signed" o "This document has already been signed"
 - El documento ya fue firmado previamente
+- El sistema valida esto antes de solicitar confirmación
 - Usar un documento diferente o reiniciar Anvil
+
+### Error: "contract.getDocument is not a function"
+- El ABI no está actualizado
+- Copiar el ABI actualizado: `cp out/DocumentRegistry.sol/DocumentRegistry.json frontend/abis/DocumentRegistry.json`
+- O recompilar: `forge build` y copiar el ABI
 
 ### Error al compilar
 ```bash
