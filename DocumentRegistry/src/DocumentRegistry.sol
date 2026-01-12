@@ -118,7 +118,6 @@ contract DocumentRegistry {
         // Verificar que el hash existe
         DocumentSignature memory sig = signatures[documentHash];
         if (sig.timestamp == 0) {
-            emit DocumentVerified(documentHash, signer, false);
             return (false, 0);
         }
 
@@ -126,9 +125,6 @@ contract DocumentRegistry {
         isValid = sig.signer == signer;
         timestamp = sig.timestamp;
 
-        // Emitir evento (aunque sea view, esto es para logging en el frontend)
-        // Nota: Los eventos en funciones view no se emiten realmente, pero se mantiene
-        // la estructura para consistencia
         return (isValid, timestamp);
     }
 

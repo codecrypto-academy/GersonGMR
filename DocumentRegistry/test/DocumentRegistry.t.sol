@@ -118,7 +118,7 @@ contract DocumentRegistryTest is Test {
     }
 
     /// @notice Test: Verificar documento no existente
-    function test_VerifyDocument_NotFound() public {
+    function test_VerifyDocument_NotFound() public view {
         bytes32 documentHash = keccak256("non-existent document");
         
         (bool isValid, uint256 timestamp) = registry.verifyDocument(documentHash, alice);
@@ -259,7 +259,7 @@ contract DocumentRegistryTest is Test {
     }
 
     /// @notice Test: Verificar historial vacío para signer sin documentos
-    function test_GetSignerHistory_Empty() public {
+    function test_GetSignerHistory_Empty() public view {
         bytes32[] memory history = registry.getSignerHistory(alice);
         assertEq(history.length, 0);
     }
