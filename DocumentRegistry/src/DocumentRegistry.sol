@@ -10,21 +10,21 @@ import {ECDSA} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/
  * @dev Cumple con estándares de seguridad de la industria, usa ECDSA de OpenZeppelin
  */
 contract DocumentRegistry {
-    /// @notice Estructura optimizada que almacena la información de una firma de documento
-    /// @dev Packed para reducir storage slots: timestamp (32) + signer (20) + signature offset
-    /// @param timestamp Timestamp de cuando se realizó la firma
-    /// @param signer Address que firmó el documento (20 bytes, almacenado en 32)
+    /// @notice Estructura que almacena la información completa de un documento firmado
+    /// @param hash Hash del documento (bytes32)
+    /// @param timestamp Timestamp de cuando se realizó la firma (uint256)
+    /// @param signer Address que firmó el documento
     /// @param signature Firma del hash realizada por el signer
-    /// @dev hash no se almacena porque es la clave del mapping (redundante)
-    struct DocumentSignature {
-        uint128 timestamp; // Reducido de uint256 a uint128 (suficiente hasta año 2106)
-        address signer;    // 20 bytes
-        bytes signature;   // Variable length
+    struct Document {
+        bytes32 hash;
+        uint256 timestamp;
+        address signer;
+        bytes signature;
     }
 
-    /// @notice Mapeo de hash a DocumentSignature para almacenar las firmas
-    /// @dev No se usa mapping redundante hashExists, se verifica si timestamp != 0
-    mapping(bytes32 => DocumentSignature) private signatures;
+    /// @notice Mapeo de hash a Document para almacenar las firmas
+    /// @dev No se usa mapping redundante hashExists, se verifica si signer != address(0)
+    mapping(bytes32 => Document) private documents;
 
     /// @notice Mapeo de signer a array de hashes firmados por ese address
     /// @dev Permite obtener el historial de firmas de un address específico
@@ -79,8 +79,8 @@ contract DocumentRegistry {
         }
 
         // Verificar que el hash no haya sido firmado previamente (early return)
-        // Se verifica si el hash ya tiene un registro (timestamp != 0)
-        if (signatures[documentHash].timestamp != 0) {
+        // Se verifica si el hash ya tiene un registro (signer != address(0))
+        if (documents[documentHash].signer != address(0)) {
             revert HashAlreadySigned(documentHash);
         }
 
@@ -90,9 +90,10 @@ contract DocumentRegistry {
             revert InvalidSignature(documentHash, msg.sender);
         }
 
-        // Almacenar la firma (optimizado: no almacenamos hash redundante)
-        uint128 timestamp = uint128(block.timestamp); // Cast seguro hasta año 2106
-        signatures[documentHash] = DocumentSignature({
+        // Almacenar el documento completo
+        uint256 timestamp = block.timestamp;
+        documents[documentHash] = Document({
+            hash: documentHash,
             timestamp: timestamp,
             signer: msg.sender,
             signature: signature
@@ -116,35 +117,51 @@ contract DocumentRegistry {
         bytes32 documentHash,
         address signer
     ) external view returns (bool isValid, uint256 timestamp) {
-        // Cargar la firma desde storage (solo una lectura)
-        DocumentSignature storage sig = signatures[documentHash];
+        // Cargar el documento desde storage (solo una lectura)
+        Document storage doc = documents[documentHash];
         
         // Early return si no existe
-        if (sig.timestamp == 0) {
+        if (doc.signer == address(0)) {
             return (false, 0);
         }
 
         // Verificar que el signer coincide
-        isValid = sig.signer == signer;
-        timestamp = uint256(sig.timestamp); // Cast a uint256 para compatibilidad
+        isValid = doc.signer == signer;
+        timestamp = doc.timestamp;
         return (isValid, timestamp);
     }
 
     /**
-     * @notice Obtiene la información completa de una firma
+     * @notice Obtiene la información completa de un documento
+     * @param documentHash Hash del documento
+     * @return document Estructura Document completa con hash, timestamp, signer y signature
+     */
+    function getDocument(
+        bytes32 documentHash
+    ) external view returns (Document memory document) {
+        Document storage doc = documents[documentHash];
+        if (doc.signer == address(0)) {
+            revert HashNotFound(documentHash);
+        }
+        return doc;
+    }
+
+    /**
+     * @notice Obtiene la información completa de una firma (compatibilidad hacia atrás)
      * @param documentHash Hash del documento
      * @return timestamp Timestamp de cuando se realizó la firma
      * @return signer Address que firmó el documento
      * @return signature Firma del hash
+     * @dev Esta función se mantiene para compatibilidad, pero se recomienda usar getDocument()
      */
     function getSignature(
         bytes32 documentHash
     ) external view returns (uint256 timestamp, address signer, bytes memory signature) {
-        DocumentSignature storage sig = signatures[documentHash];
-        if (sig.timestamp == 0) {
+        Document storage doc = documents[documentHash];
+        if (doc.signer == address(0)) {
             revert HashNotFound(documentHash);
         }
-        return (uint256(sig.timestamp), sig.signer, sig.signature);
+        return (doc.timestamp, doc.signer, doc.signature);
     }
 
     /**

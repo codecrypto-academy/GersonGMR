@@ -19,7 +19,7 @@ interface SignatureInfo {
 
 export default function DocumentHistory() {
   const { currentWallet, isConnected } = useMetaMask();
-  const { getSignerHistory, getSignature, isLoading } = useContract();
+  const { getSignerHistory, getDocument, isLoading } = useContract();
   const [signatures, setSignatures] = useState<SignatureInfo[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,24 +42,24 @@ export default function DocumentHistory() {
       // Obtener todos los hashes firmados por el wallet actual
       const hashes = await getSignerHistory(currentWallet.address);
 
-      // Obtener información detallada de cada firma
-      const signaturePromises = hashes.map(async (hash) => {
+      // Obtener información detallada de cada documento
+      const documentPromises = hashes.map(async (hash) => {
         try {
-          const sig = await getSignature(hash);
+          const doc = await getDocument(hash);
           return {
-            hash: sig.hash,
-            timestamp: sig.timestamp,
-            signature: sig.signature,
-            signer: sig.signer,
+            hash: doc.hash,
+            timestamp: doc.timestamp,
+            signature: doc.signature,
+            signer: doc.signer,
           };
         } catch (err) {
-          // Si hay error al obtener una firma, continuar con las demás
-          console.error(`Error loading signature for hash ${hash}:`, err);
+          // Si hay error al obtener un documento, continuar con los demás
+          console.error(`Error loading document for hash ${hash}:`, err);
           return null;
         }
       });
 
-      const results = await Promise.all(signaturePromises);
+      const results = await Promise.all(documentPromises);
       const validSignatures = results.filter(
         (sig): sig is SignatureInfo => sig !== null
       );
@@ -92,7 +92,7 @@ export default function DocumentHistory() {
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [isConnected, currentWallet, getSignerHistory, getSignature, hasInitialized]);
+  }, [isConnected, currentWallet, getSignerHistory, getDocument, hasInitialized]);
 
   useEffect(() => {
     // Esperar a que la wallet se restaure desde localStorage antes de cargar

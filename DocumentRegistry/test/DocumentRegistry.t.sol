@@ -382,5 +382,212 @@ contract DocumentRegistryTest is Test {
         assertGe(timestamp2, timestamp1); // El segundo debería ser igual o más reciente
     }
 
+    /// @notice Test: Obtener documento completo usando getDocument()
+    function test_GetDocument_Success() public {
+        bytes32 documentHash = keccak256("test document");
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
+
+        vm.prank(alice);
+        registry.signDocument(documentHash, signature);
+
+        DocumentRegistry.Document memory doc = registry.getDocument(documentHash);
+        assertEq(doc.hash, documentHash);
+        assertEq(doc.signer, alice);
+        assertEq(doc.timestamp, block.timestamp);
+        assertEq(doc.signature.length, signature.length);
+        assertTrue(keccak256(doc.signature) == keccak256(signature));
+    }
+
+    /// @notice Test: Error al obtener documento no existente con getDocument()
+    function test_GetDocument_NotFound() public {
+        bytes32 documentHash = keccak256("non-existent document");
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(DocumentRegistry.HashNotFound.selector, documentHash)
+        );
+        registry.getDocument(documentHash);
+    }
+
+    /// @notice Test: Verificar que el hash se almacena correctamente en el struct Document
+    function test_Document_HashStoredCorrectly() public {
+        bytes32 documentHash = keccak256("test document");
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
+
+        vm.prank(alice);
+        registry.signDocument(documentHash, signature);
+
+        DocumentRegistry.Document memory doc = registry.getDocument(documentHash);
+        assertEq(doc.hash, documentHash);
+    }
+
+    /// @notice Test: Verificar que _recoverSigner retorna address(0) para firma con s inválido (malleability)
+    function test_RecoverSigner_InvalidS() public {
+        bytes32 documentHash = keccak256("test document");
+        bytes memory validSignature = _signHash(documentHash, alicePrivateKey);
+        
+        // Extraer r, s, v
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        assembly {
+            r := mload(add(validSignature, 32))
+            s := mload(add(validSignature, 64))
+            v := byte(0, mload(add(validSignature, 96)))
+        }
+        
+        // Crear un s inválido (malleable, fuera del rango válido)
+        // El valor máximo válido de s es 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0
+        // Usaremos un valor mayor para forzar el error InvalidSignatureS
+        bytes32 invalidS = bytes32(uint256(0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A1));
+        bytes memory invalidSignature = abi.encodePacked(r, invalidS, v);
+        
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(DocumentRegistry.InvalidSignature.selector, documentHash, alice)
+        );
+        registry.signDocument(documentHash, invalidSignature);
+    }
+
+    /// @notice Test: Verificar que _recoverSigner retorna address(0) para firma que recupera address(0)
+    function test_RecoverSigner_ReturnsZeroAddress() public {
+        bytes32 documentHash = keccak256("test document");
+        
+        // Crear una firma que no recupera ningún address válido
+        // Usar una firma completamente inválida
+        bytes memory invalidSignature = new bytes(65);
+        // Llenar con valores que no forman una firma válida
+        for (uint i = 0; i < 65; i++) {
+            invalidSignature[i] = bytes1(uint8(i));
+        }
+        
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(DocumentRegistry.InvalidSignature.selector, documentHash, alice)
+        );
+        registry.signDocument(documentHash, invalidSignature);
+    }
+
+    /// @notice Test: Verificar múltiples documentos y obtener todos con getDocument()
+    function test_GetDocument_MultipleDocuments() public {
+        bytes32 hash1 = keccak256("document 1");
+        bytes32 hash2 = keccak256("document 2");
+        bytes32 hash3 = keccak256("document 3");
+
+        bytes memory sig1 = _signHash(hash1, alicePrivateKey);
+        bytes memory sig2 = _signHash(hash2, alicePrivateKey);
+        bytes memory sig3 = _signHash(hash3, bobPrivateKey);
+
+        vm.startPrank(alice);
+        registry.signDocument(hash1, sig1);
+        registry.signDocument(hash2, sig2);
+        vm.stopPrank();
+
+        vm.prank(bob);
+        registry.signDocument(hash3, sig3);
+
+        // Verificar cada documento
+        DocumentRegistry.Document memory doc1 = registry.getDocument(hash1);
+        DocumentRegistry.Document memory doc2 = registry.getDocument(hash2);
+        DocumentRegistry.Document memory doc3 = registry.getDocument(hash3);
+
+        assertEq(doc1.hash, hash1);
+        assertEq(doc1.signer, alice);
+        assertEq(doc2.hash, hash2);
+        assertEq(doc2.signer, alice);
+        assertEq(doc3.hash, hash3);
+        assertEq(doc3.signer, bob);
+    }
+
+    /// @notice Test: Verificar que verifyDocument retorna timestamp correcto
+    function test_VerifyDocument_TimestampCorrect() public {
+        bytes32 documentHash = keccak256("test document");
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
+
+        uint256 expectedTimestamp = block.timestamp;
+        vm.prank(alice);
+        registry.signDocument(documentHash, signature);
+
+        (bool isValid, uint256 timestamp) = registry.verifyDocument(documentHash, alice);
+        assertTrue(isValid);
+        assertEq(timestamp, expectedTimestamp);
+    }
+
+    /// @notice Test: Verificar que verifyDocument retorna false para signer incorrecto pero documento existe
+    function test_VerifyDocument_WrongSignerButDocumentExists() public {
+        bytes32 documentHash = keccak256("test document");
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
+
+        vm.prank(alice);
+        registry.signDocument(documentHash, signature);
+
+        // Verificar con signer incorrecto
+        (bool isValid, uint256 timestamp) = registry.verifyDocument(documentHash, bob);
+        assertFalse(isValid);
+        assertGt(timestamp, 0); // El timestamp debe ser > 0 porque el documento existe
+    }
+
+    /// @notice Test: Verificar que getSignerCount retorna 0 para address sin documentos
+    function test_GetSignerCount_ZeroForNewAddress() public view {
+        address newAddress = address(0x1234);
+        assertEq(registry.getSignerCount(newAddress), 0);
+    }
+
+    /// @notice Test: Verificar que getSignerHistory retorna array vacío para address sin documentos
+    function test_GetSignerHistory_EmptyForNewAddress() public view {
+        address newAddress = address(0x1234);
+        bytes32[] memory history = registry.getSignerHistory(newAddress);
+        assertEq(history.length, 0);
+    }
+
+    /// @notice Test: Verificar que el struct Document contiene todos los campos correctamente
+    function test_Document_AllFieldsCorrect() public {
+        bytes32 documentHash = keccak256("test document");
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
+
+        vm.prank(alice);
+        registry.signDocument(documentHash, signature);
+
+        DocumentRegistry.Document memory doc = registry.getDocument(documentHash);
+        
+        // Verificar todos los campos
+        assertEq(doc.hash, documentHash);
+        assertEq(doc.signer, alice);
+        assertEq(doc.timestamp, block.timestamp);
+        assertEq(doc.signature.length, 65); // Longitud de firma ECDSA
+        assertTrue(keccak256(doc.signature) == keccak256(signature));
+    }
+
+    /// @notice Test: Verificar que getSignature y getDocument retornan los mismos datos
+    function test_GetSignature_GetDocument_Consistency() public {
+        bytes32 documentHash = keccak256("test document");
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
+
+        vm.prank(alice);
+        registry.signDocument(documentHash, signature);
+
+        // Obtener con getSignature
+        (uint256 timestamp1, address signer1, bytes memory sig1) = registry.getSignature(documentHash);
+        
+        // Obtener con getDocument
+        DocumentRegistry.Document memory doc = registry.getDocument(documentHash);
+        
+        // Verificar consistencia
+        assertEq(timestamp1, doc.timestamp);
+        assertEq(signer1, doc.signer);
+        assertTrue(keccak256(sig1) == keccak256(doc.signature));
+    }
+
+    /// @notice Test: Verificar que signDocument almacena el hash en el struct
+    function test_SignDocument_StoresHashInStruct() public {
+        bytes32 documentHash = keccak256("test document");
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
+
+        vm.prank(alice);
+        registry.signDocument(documentHash, signature);
+
+        DocumentRegistry.Document memory doc = registry.getDocument(documentHash);
+        assertEq(doc.hash, documentHash);
+    }
+
 }
 

@@ -9,6 +9,14 @@ import { useMetaMask } from "@/contexts/MetaMaskContext";
 // @ts-ignore - JSON import
 import DocumentRegistryABI from "@/abis/DocumentRegistry.json";
 
+interface Document {
+  hash: string;
+  timestamp: bigint;
+  signer: string;
+  signature: string;
+}
+
+// Mantener DocumentSignature para compatibilidad hacia atrás
 interface DocumentSignature {
   hash: string;
   timestamp: bigint;
@@ -20,6 +28,7 @@ interface UseContractReturn {
   contract: ethers.Contract | null;
   signDocument: (hash: string, signature: string) => Promise<void>;
   verifyDocument: (hash: string, signer: string) => Promise<{ isValid: boolean; timestamp: bigint }>;
+  getDocument: (hash: string) => Promise<Document>;
   getSignature: (hash: string) => Promise<DocumentSignature>;
   getSignerHistory: (signer: string) => Promise<string[]>;
   getSignerCount: (signer: string) => Promise<bigint>;
@@ -128,7 +137,38 @@ export function useContract(): UseContractReturn {
     [contract]
   );
 
-  // Obtener información de firma
+  // Obtener información completa del documento (nueva función)
+  const getDocument = useCallback(
+    async (hash: string): Promise<Document> => {
+      if (!contract) {
+        throw new Error("Contract not initialized");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await contract.getDocument(hash);
+        // El contrato retorna el struct Document completo
+        return {
+          hash: result.hash,
+          timestamp: result.timestamp,
+          signer: result.signer,
+          signature: result.signature,
+        };
+      } catch (err: any) {
+        const errorMessage =
+          err.reason || err.message || "Failed to get document";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [contract]
+  );
+
+  // Obtener información de firma (compatibilidad hacia atrás)
   const getSignature = useCallback(
     async (hash: string): Promise<DocumentSignature> => {
       if (!contract) {
@@ -140,9 +180,9 @@ export function useContract(): UseContractReturn {
 
       try {
         const result = await contract.getSignature(hash);
-        // El contrato ahora retorna una tupla: (uint256 timestamp, address signer, bytes signature)
+        // El contrato retorna una tupla: (uint256 timestamp, address signer, bytes signature)
         return {
-          hash: hash, // El hash se pasa como parámetro, no se retorna
+          hash: hash, // El hash se pasa como parámetro, no se retorna en getSignature
           timestamp: result[0],
           signature: result[2],
           signer: result[1],
@@ -217,9 +257,9 @@ export function useContract(): UseContractReturn {
       }
 
       try {
-        // Intentar obtener la firma, si existe retorna true
-        // Si no existe, getSignature lanzará HashNotFound, entonces retornamos false
-        await contract.getSignature(hash);
+        // Intentar obtener el documento, si existe retorna true
+        // Si no existe, getDocument lanzará HashNotFound, entonces retornamos false
+        await contract.getDocument(hash);
         return true;
       } catch (err: any) {
         // Si el error es HashNotFound, el documento no existe
@@ -238,6 +278,7 @@ export function useContract(): UseContractReturn {
     contract,
     signDocument,
     verifyDocument,
+    getDocument,
     getSignature,
     getSignerHistory,
     getSignerCount,
