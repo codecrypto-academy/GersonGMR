@@ -201,9 +201,16 @@ contract DocumentRegistry {
         }
 
         // Crear el hash del mensaje con prefijo Ethereum
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
-        );
+        // Optimizado con assembly para mejor eficiencia de gas
+        bytes32 ethSignedMessageHash;
+        assembly {
+            // Crear el prefijo "\x19Ethereum Signed Message:\n32"
+            let prefix := "\x19Ethereum Signed Message:\n32"
+            // Calcular keccak256 del prefijo + hash
+            mstore(0x00, prefix)
+            mstore(0x1a, hash)
+            ethSignedMessageHash := keccak256(0x00, 0x3a)
+        }
 
         // Recuperar el address del firmante
         recovered = ecrecover(ethSignedMessageHash, v, r, s);

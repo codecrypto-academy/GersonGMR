@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
-import {DocumentRegistry} from "../src/DocumentRegistry.sol";
 
 /**
  * @title ExportABIScript
