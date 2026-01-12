@@ -1,0 +1,216 @@
+/**
+ * @file useContract.ts
+ * @description Hook para interactuar con el contrato DocumentRegistry
+ */
+
+import { useEffect, useState, useCallback } from "react";
+import { ethers } from "ethers";
+import { useWallet } from "@/contexts/WalletContext";
+// @ts-ignore - JSON import
+import DocumentRegistryABI from "@/abis/DocumentRegistry.json";
+
+interface DocumentSignature {
+  hash: string;
+  timestamp: bigint;
+  signature: string;
+  signer: string;
+}
+
+interface UseContractReturn {
+  contract: ethers.Contract | null;
+  signDocument: (hash: string, signature: string) => Promise<void>;
+  verifyDocument: (hash: string, signer: string) => Promise<{ isValid: boolean; timestamp: bigint }>;
+  getSignature: (hash: string) => Promise<DocumentSignature>;
+  getSignerHistory: (signer: string) => Promise<string[]>;
+  getSignerCount: (signer: string) => Promise<bigint>;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export function useContract(): UseContractReturn {
+  const { provider, getWalletInstance, isConnected } = useWallet();
+  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Dirección del contrato desde variables de entorno
+  const contractAddress =
+    process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
+    "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+
+  // Inicializar contrato
+  useEffect(() => {
+    if (provider) {
+      try {
+        const abi = DocumentRegistryABI.abi || DocumentRegistryABI;
+        const contractInstance = new ethers.Contract(
+          contractAddress,
+          abi,
+          provider
+        );
+        setContract(contractInstance);
+      } catch (err) {
+        console.error("Error initializing contract:", err);
+        setError("Failed to initialize contract");
+      }
+    }
+  }, [provider, contractAddress]);
+
+  // Firmar documento
+  const signDocument = useCallback(
+    async (hash: string, signature: string) => {
+      if (!contract || !isConnected) {
+        throw new Error("Contract not initialized or wallet not connected");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const wallet = getWalletInstance();
+        if (!wallet) {
+          throw new Error("Wallet not available");
+        }
+
+        const contractWithSigner = contract.connect(wallet);
+        const tx = await contractWithSigner.signDocument(
+          hash,
+          signature
+        );
+        await tx.wait();
+      } catch (err: any) {
+        const errorMessage =
+          err.reason || err.message || "Failed to sign document";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [contract, isConnected, getWalletInstance]
+  );
+
+  // Verificar documento
+  const verifyDocument = useCallback(
+    async (
+      hash: string,
+      signer: string
+    ): Promise<{ isValid: boolean; timestamp: bigint }> => {
+      if (!contract) {
+        throw new Error("Contract not initialized");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await contract.verifyDocument(hash, signer);
+        return {
+          isValid: result[0],
+          timestamp: result[1],
+        };
+      } catch (err: any) {
+        const errorMessage =
+          err.reason || err.message || "Failed to verify document";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [contract]
+  );
+
+  // Obtener información de firma
+  const getSignature = useCallback(
+    async (hash: string): Promise<DocumentSignature> => {
+      if (!contract) {
+        throw new Error("Contract not initialized");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await contract.getSignature(hash);
+        // El contrato retorna una struct, acceder a sus propiedades
+        return {
+          hash: result.hash,
+          timestamp: result.timestamp,
+          signature: result.signature,
+          signer: result.signer,
+        };
+      } catch (err: any) {
+        const errorMessage =
+          err.reason || err.message || "Failed to get signature";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [contract]
+  );
+
+  // Obtener historial de firmas
+  const getSignerHistory = useCallback(
+    async (signer: string): Promise<string[]> => {
+      if (!contract) {
+        throw new Error("Contract not initialized");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const hashes = await contract.getSignerHistory(signer);
+        return hashes;
+      } catch (err: any) {
+        const errorMessage =
+          err.reason || err.message || "Failed to get signer history";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [contract]
+  );
+
+  // Obtener conteo de firmas
+  const getSignerCount = useCallback(
+    async (signer: string): Promise<bigint> => {
+      if (!contract) {
+        throw new Error("Contract not initialized");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const count = await contract.getSignerCount(signer);
+        return count;
+      } catch (err: any) {
+        const errorMessage =
+          err.reason || err.message || "Failed to get signer count";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [contract]
+  );
+
+  return {
+    contract,
+    signDocument,
+    verifyDocument,
+    getSignature,
+    getSignerHistory,
+    getSignerCount,
+    isLoading,
+    error,
+  };
+}
+
