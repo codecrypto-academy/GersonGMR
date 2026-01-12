@@ -34,12 +34,20 @@ contract DocumentRegistryTest is Test {
     }
 
     /// @notice Helper para crear una firma válida
+    /// @dev vm.sign NO agrega el prefijo Ethereum Signed Message automáticamente
+    /// Por lo tanto, debemos pasar el hash con el prefijo ya aplicado
     function _signHash(bytes32 hash, uint256 privateKey) internal pure returns (bytes memory) {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
+        // Crear el hash con prefijo Ethereum Signed Message
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+        );
+        // Firmar el hash con prefijo
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethSignedMessageHash);
         return abi.encodePacked(r, s, v);
     }
 
-    /// @notice Helper para crear hash con prefijo Ethereum
+    /// @notice Helper para crear hash con prefijo Ethereum (deprecated, usar _signHash directamente)
+    /// @dev Mantenido para compatibilidad, pero _signHash ya maneja el prefijo
     function _getEthSignedMessageHash(bytes32 hash) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
     }
@@ -47,7 +55,7 @@ contract DocumentRegistryTest is Test {
     /// @notice Test: Firmar un documento exitosamente
     function test_SignDocument_Success() public {
         bytes32 documentHash = keccak256("test document");
-        bytes memory signature = _signHash(_getEthSignedMessageHash(documentHash), alicePrivateKey);
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
 
         vm.prank(alice);
         vm.expectEmit(true, true, false, true);
@@ -63,7 +71,7 @@ contract DocumentRegistryTest is Test {
     /// @notice Test: Error al intentar firmar un hash vacío
     function test_SignDocument_EmptyHash() public {
         bytes32 emptyHash = bytes32(0);
-        bytes memory signature = _signHash(_getEthSignedMessageHash(emptyHash), alicePrivateKey);
+        bytes memory signature = _signHash(emptyHash, alicePrivateKey);
 
         vm.prank(alice);
         vm.expectRevert(DocumentRegistry.EmptyHash.selector);
@@ -73,7 +81,7 @@ contract DocumentRegistryTest is Test {
     /// @notice Test: Error al intentar firmar un hash ya firmado
     function test_SignDocument_HashAlreadySigned() public {
         bytes32 documentHash = keccak256("test document");
-        bytes memory signature = _signHash(_getEthSignedMessageHash(documentHash), alicePrivateKey);
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
 
         vm.prank(alice);
         registry.signDocument(documentHash, signature);
@@ -90,7 +98,7 @@ contract DocumentRegistryTest is Test {
     function test_SignDocument_InvalidSignature() public {
         bytes32 documentHash = keccak256("test document");
         // Crear firma con una clave privada diferente
-        bytes memory wrongSignature = _signHash(_getEthSignedMessageHash(documentHash), bobPrivateKey);
+        bytes memory wrongSignature = _signHash(documentHash, bobPrivateKey);
 
         vm.prank(alice);
         vm.expectRevert(
@@ -102,7 +110,7 @@ contract DocumentRegistryTest is Test {
     /// @notice Test: Verificar documento firmado correctamente
     function test_VerifyDocument_Success() public {
         bytes32 documentHash = keccak256("test document");
-        bytes memory signature = _signHash(_getEthSignedMessageHash(documentHash), alicePrivateKey);
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
 
         vm.prank(alice);
         registry.signDocument(documentHash, signature);
@@ -129,16 +137,15 @@ contract DocumentRegistryTest is Test {
     /// @notice Test: Obtener información completa de una firma
     function test_GetSignature_Success() public {
         bytes32 documentHash = keccak256("test document");
-        bytes memory signature = _signHash(_getEthSignedMessageHash(documentHash), alicePrivateKey);
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
 
         vm.prank(alice);
         registry.signDocument(documentHash, signature);
 
-        DocumentRegistry.DocumentSignature memory sig = registry.getSignature(documentHash);
-        assertEq(sig.hash, documentHash);
-        assertEq(sig.signer, alice);
-        assertEq(sig.timestamp, block.timestamp);
-        assertEq(sig.signature.length, signature.length);
+        (uint256 timestamp, address signer, bytes memory sig) = registry.getSignature(documentHash);
+        assertEq(signer, alice);
+        assertEq(timestamp, block.timestamp);
+        assertEq(sig.length, signature.length);
     }
 
     /// @notice Test: Error al obtener firma de hash no existente
@@ -157,9 +164,9 @@ contract DocumentRegistryTest is Test {
         bytes32 hash2 = keccak256("document 2");
         bytes32 hash3 = keccak256("document 3");
 
-        bytes memory sig1 = _signHash(_getEthSignedMessageHash(hash1), alicePrivateKey);
-        bytes memory sig2 = _signHash(_getEthSignedMessageHash(hash2), alicePrivateKey);
-        bytes memory sig3 = _signHash(_getEthSignedMessageHash(hash3), bobPrivateKey);
+        bytes memory sig1 = _signHash(hash1, alicePrivateKey);
+        bytes memory sig2 = _signHash(hash2, alicePrivateKey);
+        bytes memory sig3 = _signHash(hash3, bobPrivateKey);
 
         vm.startPrank(alice);
         registry.signDocument(hash1, sig1);
@@ -186,8 +193,8 @@ contract DocumentRegistryTest is Test {
         bytes32 hash1 = keccak256("document 1");
         bytes32 hash2 = keccak256("document 2");
 
-        bytes memory sig1 = _signHash(_getEthSignedMessageHash(hash1), alicePrivateKey);
-        bytes memory sig2 = _signHash(_getEthSignedMessageHash(hash2), alicePrivateKey);
+        bytes memory sig1 = _signHash(hash1, alicePrivateKey);
+        bytes memory sig2 = _signHash(hash2, alicePrivateKey);
 
         assertEq(registry.getSignerCount(alice), 0);
 
@@ -205,8 +212,8 @@ contract DocumentRegistryTest is Test {
         bytes32 hash1 = keccak256("alice document");
         bytes32 hash2 = keccak256("bob document");
 
-        bytes memory sig1 = _signHash(_getEthSignedMessageHash(hash1), alicePrivateKey);
-        bytes memory sig2 = _signHash(_getEthSignedMessageHash(hash2), bobPrivateKey);
+        bytes memory sig1 = _signHash(hash1, alicePrivateKey);
+        bytes memory sig2 = _signHash(hash2, bobPrivateKey);
 
         vm.prank(alice);
         registry.signDocument(hash1, sig1);
@@ -232,30 +239,30 @@ contract DocumentRegistryTest is Test {
     /// @notice Test: Verificar que el timestamp se almacena correctamente
     function test_Timestamp_StoredCorrectly() public {
         bytes32 documentHash = keccak256("test document");
-        bytes memory signature = _signHash(_getEthSignedMessageHash(documentHash), alicePrivateKey);
+        bytes memory signature = _signHash(documentHash, alicePrivateKey);
 
         uint256 beforeTimestamp = block.timestamp;
         vm.prank(alice);
         registry.signDocument(documentHash, signature);
         uint256 afterTimestamp = block.timestamp;
 
-        DocumentRegistry.DocumentSignature memory sig = registry.getSignature(documentHash);
-        assertGe(sig.timestamp, beforeTimestamp);
-        assertLe(sig.timestamp, afterTimestamp);
+        (uint256 timestamp, , ) = registry.getSignature(documentHash);
+        assertGe(timestamp, beforeTimestamp);
+        assertLe(timestamp, afterTimestamp);
     }
 
     /// @notice Test: Verificar que la firma se almacena correctamente
     function test_Signature_StoredCorrectly() public {
         bytes32 documentHash = keccak256("test document");
-        bytes memory originalSignature = _signHash(_getEthSignedMessageHash(documentHash), alicePrivateKey);
+        bytes memory originalSignature = _signHash(documentHash, alicePrivateKey);
 
         vm.prank(alice);
         registry.signDocument(documentHash, originalSignature);
 
-        DocumentRegistry.DocumentSignature memory sig = registry.getSignature(documentHash);
-        assertEq(sig.signature.length, originalSignature.length);
+        (, , bytes memory sig) = registry.getSignature(documentHash);
+        assertEq(sig.length, originalSignature.length);
         // Comparar bytes de la firma
-        assertTrue(keccak256(sig.signature) == keccak256(originalSignature));
+        assertTrue(keccak256(sig) == keccak256(originalSignature));
     }
 
     /// @notice Test: Verificar historial vacío para signer sin documentos
@@ -263,5 +270,117 @@ contract DocumentRegistryTest is Test {
         bytes32[] memory history = registry.getSignerHistory(alice);
         assertEq(history.length, 0);
     }
+
+    /// @notice Test: Error al firmar con firma de longitud incorrecta
+    function test_SignDocument_InvalidSignatureLength() public {
+        bytes32 documentHash = keccak256("test document");
+        
+        // Crear firma con longitud incorrecta (no 65 bytes)
+        bytes memory invalidSignature = new bytes(64); // 64 bytes en lugar de 65
+        
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(DocumentRegistry.InvalidSignature.selector, documentHash, alice)
+        );
+        registry.signDocument(documentHash, invalidSignature);
+    }
+
+    /// @notice Test: Error al firmar con firma con v inválido (no 27 ni 28)
+    function test_SignDocument_InvalidV() public {
+        bytes32 documentHash = keccak256("test document");
+        bytes memory validSignature = _signHash(documentHash, alicePrivateKey);
+        
+        // Modificar v para que sea inválido (no 27 ni 28)
+        // Extraer r, s, v
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        assembly {
+            r := mload(add(validSignature, 32))
+            s := mload(add(validSignature, 64))
+            v := byte(0, mload(add(validSignature, 96)))
+        }
+        
+        // Cambiar v a un valor inválido (por ejemplo, 29)
+        uint8 invalidV = 29;
+        bytes memory invalidSignature = abi.encodePacked(r, s, invalidV);
+        
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(DocumentRegistry.InvalidSignature.selector, documentHash, alice)
+        );
+        registry.signDocument(documentHash, invalidSignature);
+    }
+
+    /// @notice Test: Verificar múltiples documentos con el mismo signer
+    function test_MultipleDocumentsSameSigner() public {
+        bytes32 hash1 = keccak256("document 1");
+        bytes32 hash2 = keccak256("document 2");
+        bytes32 hash3 = keccak256("document 3");
+        bytes32 hash4 = keccak256("document 4");
+        bytes32 hash5 = keccak256("document 5");
+
+        bytes memory sig1 = _signHash(hash1, alicePrivateKey);
+        bytes memory sig2 = _signHash(hash2, alicePrivateKey);
+        bytes memory sig3 = _signHash(hash3, alicePrivateKey);
+        bytes memory sig4 = _signHash(hash4, alicePrivateKey);
+        bytes memory sig5 = _signHash(hash5, alicePrivateKey);
+
+        vm.startPrank(alice);
+        registry.signDocument(hash1, sig1);
+        registry.signDocument(hash2, sig2);
+        registry.signDocument(hash3, sig3);
+        registry.signDocument(hash4, sig4);
+        registry.signDocument(hash5, sig5);
+        vm.stopPrank();
+
+        // Verificar que todos fueron firmados
+        assertEq(registry.getSignerCount(alice), 5);
+        
+        bytes32[] memory history = registry.getSignerHistory(alice);
+        assertEq(history.length, 5);
+        
+        // Verificar cada uno
+        (bool isValid1, ) = registry.verifyDocument(hash1, alice);
+        (bool isValid2, ) = registry.verifyDocument(hash2, alice);
+        (bool isValid3, ) = registry.verifyDocument(hash3, alice);
+        (bool isValid4, ) = registry.verifyDocument(hash4, alice);
+        (bool isValid5, ) = registry.verifyDocument(hash5, alice);
+        
+        assertTrue(isValid1);
+        assertTrue(isValid2);
+        assertTrue(isValid3);
+        assertTrue(isValid4);
+        assertTrue(isValid5);
+    }
+
+    /// @notice Test: Verificar que getSignature retorna datos correctos para múltiples documentos
+    function test_GetSignature_MultipleDocuments() public {
+        bytes32 hash1 = keccak256("document 1");
+        bytes32 hash2 = keccak256("document 2");
+
+        bytes memory sig1 = _signHash(hash1, alicePrivateKey);
+        bytes memory sig2 = _signHash(hash2, bobPrivateKey);
+
+        vm.prank(alice);
+        registry.signDocument(hash1, sig1);
+
+        // Avanzar el tiempo para que el segundo documento tenga un timestamp diferente
+        vm.warp(block.timestamp + 1);
+
+        vm.prank(bob);
+        registry.signDocument(hash2, sig2);
+
+        (uint256 timestamp1, address signer1, ) = registry.getSignature(hash1);
+        (uint256 timestamp2, address signer2, ) = registry.getSignature(hash2);
+
+        assertEq(signer1, alice);
+        assertGt(timestamp1, 0);
+
+        assertEq(signer2, bob);
+        assertGt(timestamp2, 0);
+        assertGe(timestamp2, timestamp1); // El segundo debería ser igual o más reciente
+    }
+
 }
 

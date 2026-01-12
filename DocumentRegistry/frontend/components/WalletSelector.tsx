@@ -6,7 +6,7 @@
  */
 
 import React from "react";
-import { useWallet } from "@/contexts/WalletContext";
+import { useMetaMask } from "@/contexts/MetaMaskContext";
 
 export default function WalletSelector() {
   const {
@@ -15,7 +15,7 @@ export default function WalletSelector() {
     isConnected,
     connect,
     disconnect,
-  } = useWallet();
+  } = useMetaMask();
 
   const truncateAddress = (address: string): string => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -34,7 +34,7 @@ export default function WalletSelector() {
               <p className="text-sm font-medium text-green-800 dark:text-green-200">
                 Connected
               </p>
-              <p className="text-xs font-mono text-green-600 dark:text-green-400 mt-1">
+              <p className="text-xs font-mono text-green-600 dark:text-green-400 mt-1 break-all">
                 {currentWallet.address}
               </p>
             </div>
@@ -64,8 +64,8 @@ export default function WalletSelector() {
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       Wallet {wallet.index + 1}
                     </p>
-                    <p className="text-xs font-mono text-gray-600 dark:text-gray-400">
-                      {truncateAddress(wallet.address)}
+                    <p className="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">
+                      {wallet.address}
                     </p>
                   </div>
                   <svg

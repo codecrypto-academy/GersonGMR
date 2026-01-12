@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
-import { useWallet } from "@/contexts/WalletContext";
+import { useMetaMask } from "@/contexts/MetaMaskContext";
 import { useContract } from "@/hooks/useContract";
 
 interface SignatureInfo {
@@ -18,7 +18,7 @@ interface SignatureInfo {
 }
 
 export default function DocumentHistory() {
-  const { currentWallet, isConnected } = useWallet();
+  const { currentWallet, isConnected } = useMetaMask();
   const { getSignerHistory, getSignature, isLoading } = useContract();
   const [signatures, setSignatures] = useState<SignatureInfo[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -94,11 +94,6 @@ export default function DocumentHistory() {
     return date.toLocaleString();
   };
 
-  const truncateHash = (hash: string, length: number = 10): string => {
-    if (hash.length <= length * 2 + 2) return hash;
-    return `${hash.slice(0, length + 2)}...${hash.slice(-length)}`;
-  };
-
   if (!isConnected || !currentWallet) {
     return (
       <div className="space-y-6">
@@ -167,7 +162,7 @@ export default function DocumentHistory() {
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Document Hash
+                    Document Hash (Complete)
                   </p>
                   <p className="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">
                     {sig.hash}
@@ -183,10 +178,10 @@ export default function DocumentHistory() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div>
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-500 mb-1">
-                    Signer
+                    Signer Address
                   </p>
-                  <p className="text-xs font-mono text-gray-700 dark:text-gray-300">
-                    {truncateHash(sig.signer)}
+                  <p className="text-xs font-mono text-gray-700 dark:text-gray-300 break-all">
+                    {sig.signer}
                   </p>
                 </div>
                 <div>
@@ -194,7 +189,7 @@ export default function DocumentHistory() {
                     Signature
                   </p>
                   <p className="text-xs font-mono text-gray-700 dark:text-gray-300 break-all">
-                    {truncateHash(sig.signature, 8)}
+                    {sig.signature}
                   </p>
                 </div>
               </div>

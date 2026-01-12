@@ -1,27 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {ECDSA} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+
 /**
  * @title DocumentRegistry
  * @author GersonGMR
  * @notice Smart contract para registro y verificación de documentos mediante firma de hashes
- * @dev Cumple con estándares de seguridad de la industria, sin campos redundantes
+ * @dev Cumple con estándares de seguridad de la industria, usa ECDSA de OpenZeppelin
  */
 contract DocumentRegistry {
-    /// @notice Estructura que almacena la información de una firma de documento
-    /// @param hash Hash del documento firmado
+    /// @notice Estructura optimizada que almacena la información de una firma de documento
+    /// @dev Packed para reducir storage slots: timestamp (32) + signer (20) + signature offset
     /// @param timestamp Timestamp de cuando se realizó la firma
+    /// @param signer Address que firmó el documento (20 bytes, almacenado en 32)
     /// @param signature Firma del hash realizada por el signer
-    /// @param signer Address que firmó el documento
+    /// @dev hash no se almacena porque es la clave del mapping (redundante)
     struct DocumentSignature {
-        bytes32 hash;
-        uint256 timestamp;
-        bytes signature;
-        address signer;
+        uint128 timestamp; // Reducido de uint256 a uint128 (suficiente hasta año 2106)
+        address signer;    // 20 bytes
+        bytes signature;   // Variable length
     }
 
     /// @notice Mapeo de hash a DocumentSignature para almacenar las firmas
-    /// @dev No se usa mapping redundante hashExists, se verifica si hash != bytes32(0)
+    /// @dev No se usa mapping redundante hashExists, se verifica si timestamp != 0
     mapping(bytes32 => DocumentSignature) private signatures;
 
     /// @notice Mapeo de signer a array de hashes firmados por ese address
@@ -69,32 +71,31 @@ contract DocumentRegistry {
      */
     function signDocument(
         bytes32 documentHash,
-        bytes memory signature
+        bytes calldata signature
     ) external {
-        // Validar que el hash no esté vacío
+        // Validar que el hash no esté vacío (early return)
         if (documentHash == bytes32(0)) {
             revert EmptyHash();
         }
 
-        // Verificar que el hash no haya sido firmado previamente
+        // Verificar que el hash no haya sido firmado previamente (early return)
         // Se verifica si el hash ya tiene un registro (timestamp != 0)
         if (signatures[documentHash].timestamp != 0) {
             revert HashAlreadySigned(documentHash);
         }
 
-        // Verificar que la firma sea válida
+        // Verificar que la firma sea válida (early return)
         address recoveredSigner = _recoverSigner(documentHash, signature);
-        if (recoveredSigner != msg.sender) {
+        if (recoveredSigner != msg.sender || recoveredSigner == address(0)) {
             revert InvalidSignature(documentHash, msg.sender);
         }
 
-        // Almacenar la firma
-        uint256 timestamp = block.timestamp;
+        // Almacenar la firma (optimizado: no almacenamos hash redundante)
+        uint128 timestamp = uint128(block.timestamp); // Cast seguro hasta año 2106
         signatures[documentHash] = DocumentSignature({
-            hash: documentHash,
             timestamp: timestamp,
-            signature: signature,
-            signer: msg.sender
+            signer: msg.sender,
+            signature: signature
         });
 
         // Agregar el hash al historial del signer
@@ -115,32 +116,35 @@ contract DocumentRegistry {
         bytes32 documentHash,
         address signer
     ) external view returns (bool isValid, uint256 timestamp) {
-        // Verificar que el hash existe
-        DocumentSignature memory sig = signatures[documentHash];
+        // Cargar la firma desde storage (solo una lectura)
+        DocumentSignature storage sig = signatures[documentHash];
+        
+        // Early return si no existe
         if (sig.timestamp == 0) {
             return (false, 0);
         }
 
         // Verificar que el signer coincide
         isValid = sig.signer == signer;
-        timestamp = sig.timestamp;
-
+        timestamp = uint256(sig.timestamp); // Cast a uint256 para compatibilidad
         return (isValid, timestamp);
     }
 
     /**
      * @notice Obtiene la información completa de una firma
      * @param documentHash Hash del documento
-     * @return signature Estructura DocumentSignature con toda la información
+     * @return timestamp Timestamp de cuando se realizó la firma
+     * @return signer Address que firmó el documento
+     * @return signature Firma del hash
      */
     function getSignature(
         bytes32 documentHash
-    ) external view returns (DocumentSignature memory signature) {
-        DocumentSignature memory sig = signatures[documentHash];
+    ) external view returns (uint256 timestamp, address signer, bytes memory signature) {
+        DocumentSignature storage sig = signatures[documentHash];
         if (sig.timestamp == 0) {
             revert HashNotFound(documentHash);
         }
-        return sig;
+        return (uint256(sig.timestamp), sig.signer, sig.signature);
     }
 
     /**
@@ -168,53 +172,38 @@ contract DocumentRegistry {
      * @param hash Hash que fue firmado
      * @param signature Firma a verificar
      * @return recovered Address recuperado de la firma
-     * @dev Usa ecrecover para verificar la firma ECDSA
+     * @dev Usa ECDSA de OpenZeppelin para verificar la firma de forma segura
+     * @dev Previene signature malleability validando el valor de s
      */
     function _recoverSigner(
         bytes32 hash,
-        bytes memory signature
+        bytes calldata signature
     ) internal pure returns (address recovered) {
-        // Verificar que la firma tenga la longitud correcta (65 bytes)
-        if (signature.length != 65) {
+        // Crear el hash del mensaje con prefijo Ethereum usando ECDSA
+        bytes32 ethSignedMessageHash = ECDSA.toEthSignedMessageHash(hash);
+
+        // Convertir calldata a memory de forma eficiente usando assembly
+        bytes memory signatureMemory;
+        assembly {
+            let signatureLength := signature.length
+            // Asignar memoria para la firma
+            signatureMemory := mload(0x40)
+            mstore(signatureMemory, signatureLength)
+            // Copiar datos de calldata a memory
+            calldatacopy(add(signatureMemory, 0x20), signature.offset, signatureLength)
+            // Actualizar el puntero de memoria libre
+            mstore(0x40, add(signatureMemory, add(0x20, signatureLength)))
+        }
+
+        // Recuperar el address del firmante usando ECDSA.tryRecover
+        // Esto valida automáticamente la firma y previene malleability
+        (address signer, ECDSA.RecoverError error, ) = ECDSA.tryRecover(ethSignedMessageHash, signatureMemory);
+        
+        // Si hay error o el signer es address(0), retornar address(0)
+        if (error != ECDSA.RecoverError.NoError || signer == address(0)) {
             return address(0);
         }
-
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        // Extraer r, s, v de la firma
-        assembly {
-            r := mload(add(signature, 32))
-            s := mload(add(signature, 64))
-            v := byte(0, mload(add(signature, 96)))
-        }
-
-        // Ajustar v si es necesario (27 o 28)
-        if (v < 27) {
-            v += 27;
-        }
-
-        // Verificar que v sea 27 o 28
-        if (v != 27 && v != 28) {
-            return address(0);
-        }
-
-        // Crear el hash del mensaje con prefijo Ethereum
-        // Optimizado con assembly para mejor eficiencia de gas
-        bytes32 ethSignedMessageHash;
-        assembly {
-            // Crear el prefijo "\x19Ethereum Signed Message:\n32"
-            let prefix := "\x19Ethereum Signed Message:\n32"
-            // Calcular keccak256 del prefijo + hash
-            mstore(0x00, prefix)
-            mstore(0x1a, hash)
-            ethSignedMessageHash := keccak256(0x00, 0x3a)
-        }
-
-        // Recuperar el address del firmante
-        recovered = ecrecover(ethSignedMessageHash, v, r, s);
-        return recovered;
+        
+        return signer;
     }
 }
-

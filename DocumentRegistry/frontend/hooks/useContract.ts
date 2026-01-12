@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { ethers } from "ethers";
-import { useWallet } from "@/contexts/WalletContext";
+import { useMetaMask } from "@/contexts/MetaMaskContext";
 // @ts-ignore - JSON import
 import DocumentRegistryABI from "@/abis/DocumentRegistry.json";
 
@@ -28,7 +28,7 @@ interface UseContractReturn {
 }
 
 export function useContract(): UseContractReturn {
-  const { provider, getWalletInstance, isConnected } = useWallet();
+  const { provider, getWalletInstance, isConnected } = useMetaMask();
   const [contract, setContract] = useState<ethers.Contract | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +72,7 @@ export function useContract(): UseContractReturn {
           throw new Error("Wallet not available");
         }
 
-        const contractWithSigner = contract.connect(wallet);
+        const contractWithSigner = contract.connect(wallet) as ethers.Contract;
         const tx = await contractWithSigner.signDocument(
           hash,
           signature
@@ -133,12 +133,12 @@ export function useContract(): UseContractReturn {
 
       try {
         const result = await contract.getSignature(hash);
-        // El contrato retorna una struct, acceder a sus propiedades
+        // El contrato ahora retorna una tupla: (uint256 timestamp, address signer, bytes signature)
         return {
-          hash: result.hash,
-          timestamp: result.timestamp,
-          signature: result.signature,
-          signer: result.signer,
+          hash: hash, // El hash se pasa como parámetro, no se retorna
+          timestamp: result[0],
+          signature: result[2],
+          signer: result[1],
         };
       } catch (err: any) {
         const errorMessage =

@@ -2,18 +2,17 @@
 
 /**
  * @file DocumentSigner.tsx
- * @description Componente para firmar documentos con alerts
+ * @description Componente para firmar documentos con alerts y confirmación del browser
  */
 
 import React, { useState, useCallback } from "react";
 import { ethers } from "ethers";
 import FileUploader from "./FileUploader";
-import { useWallet } from "@/contexts/WalletContext";
+import { useMetaMask } from "@/contexts/MetaMaskContext";
 import { useContract } from "@/hooks/useContract";
-import { signHash } from "@/lib/wallet";
 
 export default function DocumentSigner() {
-  const { currentWallet, getWalletInstance, isConnected } = useWallet();
+  const { currentWallet, isConnected, requestSignature } = useMetaMask();
   const { signDocument, isLoading, error: contractError } = useContract();
   const [documentHash, setDocumentHash] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
@@ -50,11 +49,6 @@ export default function DocumentSigner() {
     setAlert(null);
 
     try {
-      const wallet = getWalletInstance();
-      if (!wallet) {
-        throw new Error("Wallet not available");
-      }
-
       // El hash ya viene del FileUploader en formato hex
       // Asegurarse de que tenga el formato correcto bytes32
       let hashBytes32 = documentHash;
@@ -64,8 +58,9 @@ export default function DocumentSigner() {
       // Asegurar que sea exactamente 32 bytes (64 caracteres hex + 0x)
       hashBytes32 = ethers.zeroPadValue(hashBytes32, 32);
 
-      // Firmar el hash
-      const signature = await signHash(wallet, hashBytes32);
+      // Solicitar firma con confirmación del usuario (simula MetaMask)
+      // Esto mostrará un alert en el browser para confirmar
+      const signature = await requestSignature(hashBytes32);
 
       // Registrar en blockchain
       await signDocument(hashBytes32, signature);
@@ -99,6 +94,8 @@ export default function DocumentSigner() {
         errorMessage = "Invalid document hash";
       } else if (errorMessage.includes("InvalidSignature")) {
         errorMessage = "Invalid signature. Please try again.";
+      } else if (errorMessage.includes("User rejected")) {
+        errorMessage = "Signature request was rejected by user";
       }
 
       setAlert({
@@ -108,7 +105,7 @@ export default function DocumentSigner() {
     } finally {
       setIsSigning(false);
     }
-  }, [documentHash, fileName, isConnected, currentWallet, getWalletInstance, signDocument]);
+  }, [documentHash, fileName, isConnected, currentWallet, requestSignature, signDocument]);
 
   return (
     <div className="space-y-6">
@@ -119,10 +116,18 @@ export default function DocumentSigner() {
         </p>
       </div>
 
-      <FileUploader
-        onFileSelected={handleFileSelected}
-        disabled={isSigning || isLoading}
-      />
+      {!isConnected ? (
+        <div className="p-8 text-center bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            Please connect a wallet to upload and sign documents
+          </p>
+        </div>
+      ) : (
+        <FileUploader
+          onFileSelected={handleFileSelected}
+          disabled={isSigning || isLoading}
+        />
+      )}
 
       {documentHash && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
