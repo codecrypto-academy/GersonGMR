@@ -13,7 +13,6 @@ import { useContract } from "@/hooks/useContract";
 interface SignatureInfo {
   hash: string;
   timestamp: bigint;
-  signature: string;
   signer: string;
 }
 
@@ -42,14 +41,13 @@ export default function DocumentHistory() {
       // Obtener todos los hashes firmados por el wallet actual
       const hashes = await getSignerHistory(currentWallet.address);
 
-      // Obtener información detallada de cada documento
+      // Obtener información detallada de cada documento (sin signature)
       const documentPromises = hashes.map(async (hash) => {
         try {
           const doc = await getDocument(hash);
           return {
             hash: doc.hash,
             timestamp: doc.timestamp,
-            signature: doc.signature,
             signer: doc.signer,
           };
         } catch (err) {
@@ -195,21 +193,13 @@ export default function DocumentHistory() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div>
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-500 mb-1">
                     Signer Address
                   </p>
                   <p className="text-xs font-mono text-gray-700 dark:text-gray-300 break-all">
                     {sig.signer}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-500 mb-1">
-                    Signature
-                  </p>
-                  <p className="text-xs font-mono text-gray-700 dark:text-gray-300 break-all">
-                    {sig.signature}
                   </p>
                 </div>
               </div>

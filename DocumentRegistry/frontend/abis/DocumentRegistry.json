@@ -101,6 +101,47 @@
           "type": "bytes32"
         }
       ],
+      "name": "getDocument",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "bytes32",
+              "name": "hash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "signer",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct DocumentRegistry.Document",
+          "name": "document",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "documentHash",
+          "type": "bytes32"
+        }
+      ],
       "name": "getSignature",
       "outputs": [
         {
