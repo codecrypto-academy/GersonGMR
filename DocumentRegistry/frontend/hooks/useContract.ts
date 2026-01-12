@@ -23,6 +23,7 @@ interface UseContractReturn {
   getSignature: (hash: string) => Promise<DocumentSignature>;
   getSignerHistory: (signer: string) => Promise<string[]>;
   getSignerCount: (signer: string) => Promise<bigint>;
+  checkDocumentExists: (hash: string) => Promise<boolean>;
   isLoading: boolean;
   error: string | null;
 }
@@ -42,6 +43,12 @@ export function useContract(): UseContractReturn {
   useEffect(() => {
     if (provider) {
       try {
+        // Validar que la dirección del contrato sea válida
+        if (!ethers.isAddress(contractAddress)) {
+          setError(`Invalid contract address: ${contractAddress}`);
+          return;
+        }
+
         const abi = DocumentRegistryABI.abi || DocumentRegistryABI;
         const contractInstance = new ethers.Contract(
           contractAddress,
@@ -202,6 +209,31 @@ export function useContract(): UseContractReturn {
     [contract]
   );
 
+  // Verificar si un documento ya fue firmado
+  const checkDocumentExists = useCallback(
+    async (hash: string): Promise<boolean> => {
+      if (!contract) {
+        throw new Error("Contract not initialized");
+      }
+
+      try {
+        // Intentar obtener la firma, si existe retorna true
+        // Si no existe, getSignature lanzará HashNotFound, entonces retornamos false
+        await contract.getSignature(hash);
+        return true;
+      } catch (err: any) {
+        // Si el error es HashNotFound, el documento no existe
+        const errorMessage = err.reason || err.message || "";
+        if (errorMessage.includes("HashNotFound")) {
+          return false;
+        }
+        // Si es otro error, lo propagamos
+        throw err;
+      }
+    },
+    [contract]
+  );
+
   return {
     contract,
     signDocument,
@@ -209,6 +241,7 @@ export function useContract(): UseContractReturn {
     getSignature,
     getSignerHistory,
     getSignerCount,
+    checkDocumentExists,
     isLoading,
     error,
   };

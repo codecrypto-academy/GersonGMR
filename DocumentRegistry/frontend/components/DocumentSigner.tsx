@@ -13,7 +13,7 @@ import { useContract } from "@/hooks/useContract";
 
 export default function DocumentSigner() {
   const { currentWallet, isConnected, requestSignature } = useMetaMask();
-  const { signDocument, isLoading, error: contractError } = useContract();
+  const { signDocument, checkDocumentExists, isLoading, error: contractError } = useContract();
   const [documentHash, setDocumentHash] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
   const [isSigning, setIsSigning] = useState(false);
@@ -58,6 +58,12 @@ export default function DocumentSigner() {
       // Asegurar que sea exactamente 32 bytes (64 caracteres hex + 0x)
       hashBytes32 = ethers.zeroPadValue(hashBytes32, 32);
 
+      // Validar si el documento ya fue firmado previamente
+      const alreadySigned = await checkDocumentExists(hashBytes32);
+      if (alreadySigned) {
+        throw new Error("This document has already been signed and cannot be signed again");
+      }
+
       // Solicitar firma con confirmación del usuario (simula MetaMask)
       // Esto mostrará un alert en el browser para confirmar
       const signature = await requestSignature(hashBytes32);
@@ -88,8 +94,8 @@ export default function DocumentSigner() {
       }
 
       // Manejar errores específicos del contrato
-      if (errorMessage.includes("HashAlreadySigned")) {
-        errorMessage = "This document has already been signed";
+      if (errorMessage.includes("already been signed") || errorMessage.includes("HashAlreadySigned")) {
+        errorMessage = "This document has already been signed and cannot be signed again";
       } else if (errorMessage.includes("EmptyHash")) {
         errorMessage = "Invalid document hash";
       } else if (errorMessage.includes("InvalidSignature")) {
@@ -105,7 +111,7 @@ export default function DocumentSigner() {
     } finally {
       setIsSigning(false);
     }
-  }, [documentHash, fileName, isConnected, currentWallet, requestSignature, signDocument]);
+  }, [documentHash, fileName, isConnected, currentWallet, requestSignature, signDocument, checkDocumentExists]);
 
   return (
     <div className="space-y-6">

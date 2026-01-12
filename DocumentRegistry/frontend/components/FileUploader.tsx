@@ -54,12 +54,27 @@ export default function FileUploader({
     async (file: File) => {
       if (!file) return;
 
+      // Validar tamaño de archivo (máximo 10MB)
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`File size exceeds maximum allowed size of ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+        return;
+      }
+
+      // Validar que el archivo no esté vacío
+      if (file.size === 0) {
+        setError("Cannot process empty file");
+        return;
+      }
+
       setIsProcessing(true);
       setError(null);
 
       try {
         const hash = await calculateFileHash(file);
-        onFileSelected(hash, file.name);
+        // Sanitizar nombre de archivo (remover caracteres peligrosos)
+        const sanitizedFileName = file.name.replace(/[<>:"/\\|?*]/g, '_');
+        onFileSelected(hash, sanitizedFileName);
       } catch (err: any) {
         const errorMessage =
           err.message || "Error processing file. Please try again.";

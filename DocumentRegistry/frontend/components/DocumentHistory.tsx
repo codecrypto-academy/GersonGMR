@@ -23,10 +23,15 @@ export default function DocumentHistory() {
   const [signatures, setSignatures] = useState<SignatureInfo[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const loadHistory = useCallback(async () => {
+    // No limpiar el historial si aún no se ha inicializado (evita limpiar durante la restauración)
     if (!isConnected || !currentWallet) {
-      setSignatures([]);
+      // Solo limpiar si ya se había inicializado previamente (usuario desconectó)
+      if (hasInitialized) {
+        setSignatures([]);
+      }
       return;
     }
 
@@ -67,6 +72,7 @@ export default function DocumentHistory() {
       });
 
       setSignatures(validSignatures);
+      setHasInitialized(true); // Marcar como inicializado después de cargar exitosamente
     } catch (err: any) {
       let errorMessage = "Failed to load signature history";
 
@@ -79,15 +85,29 @@ export default function DocumentHistory() {
       }
 
       setError(errorMessage);
-      setSignatures([]);
+      // Solo limpiar si ya estaba inicializado
+      if (hasInitialized) {
+        setSignatures([]);
+      }
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [isConnected, currentWallet, getSignerHistory, getSignature]);
+  }, [isConnected, currentWallet, getSignerHistory, getSignature, hasInitialized]);
 
   useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+    // Esperar a que la wallet se restaure desde localStorage antes de cargar
+    // Verificar si hay una wallet guardada en localStorage
+    const savedWalletIndex = localStorage.getItem("connectedWalletIndex");
+    const isRestoring = savedWalletIndex !== null && !isConnected;
+    
+    // Solo cargar si:
+    // 1. Hay wallet conectada Y
+    // 2. No se está restaurando (ya se restauró o nunca hubo una guardada) Y
+    // 3. No se ha inicializado aún
+    if (isConnected && currentWallet && !isRestoring && !hasInitialized) {
+      loadHistory();
+    }
+  }, [isConnected, currentWallet, hasInitialized, loadHistory]);
 
   const formatTimestamp = (timestamp: bigint): string => {
     const date = new Date(Number(timestamp) * 1000);
