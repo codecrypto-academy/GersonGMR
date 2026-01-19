@@ -172,9 +172,12 @@ contract DAOVotingTest is Test {
         
         // Ejecutar propuesta
         uint256 recipientBalanceBefore = recipient.balance;
+        uint256 daoTotalBalanceBefore = dao.totalBalance();
+        
         dao.executeProposal(1);
         
         assertEq(recipient.balance, recipientBalanceBefore + 5 ether);
+        assertEq(dao.totalBalance(), daoTotalBalanceBefore - 5 ether);
         
         DAOVoting.Proposal memory proposal = dao.getProposal(1);
         assertTrue(proposal.executed);

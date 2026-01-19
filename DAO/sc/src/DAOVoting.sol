@@ -171,6 +171,7 @@ contract DAOVoting is ERC2771Context {
         require(address(this).balance >= proposal.amount, "Insufficient contract balance");
 
         proposal.executed = true;
+        totalBalance -= proposal.amount;
 
         (bool success, ) = proposal.recipient.call{value: proposal.amount}("");
         require(success, "Transfer failed");
