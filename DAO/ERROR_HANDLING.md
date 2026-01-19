@@ -24,6 +24,7 @@ getErrorMessage(error: any): string
 | Error del Contrato | Mensaje Amigable |
 |-------------------|------------------|
 | `Invalid recipient` | "The recipient address is not valid" |
+| `Cannot send funds to DAO itself` | "You cannot create a proposal to send funds to the DAO itself" |
 | `Amount must be greater than 0` | "The amount must be greater than 0 ETH" |
 | `Insufficient DAO balance` | "The DAO doesn't have enough funds for this proposal" |
 | `Deadline must be in the future` | "The voting deadline must be in the future" |

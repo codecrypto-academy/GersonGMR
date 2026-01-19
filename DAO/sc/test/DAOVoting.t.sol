@@ -73,6 +73,17 @@ contract DAOVotingTest is Test {
         dao.createProposal(recipient, 1 ether, block.timestamp + 1 days, "Test proposal");
     }
 
+    function testCreateProposalFailsWithDAOAsRecipient() public {
+        // User1 deposita 10 ETH
+        vm.prank(user1);
+        dao.fundDao{value: 10 ether}();
+        
+        // User1 intenta crear propuesta con el DAO como recipient (debería fallar)
+        vm.prank(user1);
+        vm.expectRevert("Cannot send funds to DAO itself");
+        dao.createProposal(address(dao), 1 ether, block.timestamp + 1 days, "Test proposal");
+    }
+
     function testVoteFor() public {
         // Setup: User1 deposita y crea propuesta
         vm.prank(user1);

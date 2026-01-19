@@ -14,6 +14,10 @@ export function getErrorMessage(error: any): string {
     return "The recipient address is not valid";
   }
   
+  if (errorString.includes("Cannot send funds to DAO itself")) {
+    return "You cannot create a proposal to send funds to the DAO itself";
+  }
+  
   if (errorString.includes("Amount must be greater than 0")) {
     return "The amount must be greater than 0 ETH";
   }

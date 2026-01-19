@@ -14,7 +14,7 @@ export function FundingPanel() {
 
   useEffect(() => {
     loadProposalCount();
-  }, [daoContract]);
+  }, [daoContract, daoTotalBalance]); // Re-load when balance changes
 
   const loadProposalCount = async () => {
     if (!daoContract) return;

@@ -90,11 +90,13 @@ export function ProposalCard({ proposal: initialProposal, onVoteComplete }: Prop
 
       setMessage("✅ Proposal executed successfully!");
       
-      // Refresh balances and proposal list
+      // Refresh this proposal's state and DAO balances
+      await refreshProposal();
       await refreshBalances();
       
       setTimeout(() => {
         onVoteComplete();
+        setMessage("");
       }, 2000);
     } catch (error: any) {
       console.error("Error executing proposal:", error);

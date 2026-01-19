@@ -2,6 +2,20 @@
 
 Esta guía te muestra cómo probar el flujo completo de un proposal sin esperar tiempo real.
 
+## 🌐 Anvil vs Producción: Diferencias Importantes
+
+### En Producción (Ethereum/Testnets)
+- ✅ Los bloques se minan **automáticamente** cada ~12 segundos
+- ✅ El tiempo avanza **sin necesidad de hacer nada**
+- ✅ NO necesitas `evm_increaseTime` ni `evm_mine`
+- ✅ Solo esperas el tiempo real (ej: 7 días para el deadline)
+
+### En Anvil (Desarrollo Local)
+- ⚠️ Los bloques se minan **solo cuando hay transacciones**
+- ⚠️ Si no hay transacciones, el tiempo NO avanza
+- ⚠️ Necesitas **`evm_increaseTime`** + **`evm_mine`** para avanzar el tiempo
+- ✅ Perfecto para testing rápido sin esperar días reales
+
 ## 📋 Prerequisitos
 
 - Anvil corriendo en `http://127.0.0.1:8545`
@@ -186,6 +200,90 @@ cast rpc evm_increaseTime 3600 --rpc-url http://127.0.0.1:8545 && cast rpc evm_m
 | 1 día | 86,400 | `cast rpc evm_increaseTime 86400 ...` |
 | 7 días | 604,800 | `cast rpc evm_increaseTime 604800 ...` |
 | 30 días | 2,592,000 | `cast rpc evm_increaseTime 2592000 ...` |
+
+---
+
+## 🔧 Modos de Minado en Anvil
+
+### Modo Actual (Por Defecto): "Mine on Transaction"
+```bash
+# Anvil solo mina cuando hay una transacción
+anvil
+```
+
+**Características:**
+- ✅ Rápido y eficiente para testing
+- ✅ No desperdicia recursos
+- ⚠️ El tiempo NO avanza sin transacciones
+- ⚠️ Necesitas `evm_mine` después de `evm_increaseTime`
+
+### Modo Alternativo: "Auto-mine" con Intervalo
+```bash
+# Minar un bloque cada 12 segundos (simulando Ethereum mainnet)
+anvil --block-time 12
+```
+
+**Características:**
+- ✅ Simula comportamiento de producción
+- ✅ El tiempo avanza automáticamente
+- ✅ NO necesitas `evm_mine` después de `evm_increaseTime`
+- ⚠️ Consume más recursos
+- ⚠️ Más lento para testing
+
+### ¿Cuál usar?
+
+**Para Development/Testing (Recomendado):**
+```bash
+anvil  # Sin --block-time
+```
+- Más control
+- Pruebas más rápidas
+- Usa `evm_mine` manualmente cuando necesites
+
+**Para Simular Producción:**
+```bash
+anvil --block-time 12
+```
+- Comportamiento realista
+- Útil para detectar bugs relacionados con timing
+- El tiempo pasa automáticamente
+
+---
+
+## 🌍 En Producción (Ethereum Mainnet/Testnets)
+
+Cuando despliegues en una red real:
+
+### ✅ Qué funciona automáticamente:
+- Los bloques se minan cada ~12 segundos **sin hacer nada**
+- El tiempo avanza naturalmente
+- Los deadlines se cumplen en tiempo real
+- Todo funciona igual que en desarrollo
+
+### ❌ Qué NO funciona:
+- `evm_increaseTime` - No existe en producción
+- `evm_mine` - No existe en producción
+- "Time travel" - Imposible, el tiempo es real
+
+### 📊 Comparación:
+
+| Aspecto | Anvil (Desarrollo) | Producción (Mainnet) |
+|---------|-------------------|---------------------|
+| **Minado** | Manual/On-demand | Automático (~12s) |
+| **Time travel** | ✅ `evm_increaseTime` | ❌ No disponible |
+| **Deadline de 7 días** | ⚡ 10 segundos (con `evm_increaseTime`) | 🐌 7 días reales |
+| **Costo gas** | ⚡ Gratis | 💰 Real (ETH) |
+| **Reset blockchain** | ✅ Reiniciar Anvil | ❌ Permanente |
+| **Velocidad testing** | 🚀 Instantáneo | 🕐 Tiempo real |
+
+### 🚀 Despliegue en Producción:
+
+Cuando estés listo para desplegar:
+
+1. **Testea exhaustivamente** en Anvil con time travel
+2. **Usa una testnet primero** (ej: Sepolia) - gratis pero tiempo real
+3. **Verifica todos los tiempos**: Los deadlines serán reales (7 días = 7 días)
+4. **El código funciona igual**, solo sin comandos de debugging
 
 ---
 

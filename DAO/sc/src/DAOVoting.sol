@@ -82,6 +82,7 @@ contract DAOVoting is ERC2771Context {
      */
     function createProposal(address recipient, uint256 amount, uint256 deadline, string calldata description) external {
         require(recipient != address(0), "Invalid recipient");
+        require(recipient != address(this), "Cannot send funds to DAO itself");
         require(amount > 0, "Amount must be greater than 0");
         require(amount <= address(this).balance, "Insufficient DAO balance");
         require(deadline > block.timestamp, "Deadline must be in the future");
