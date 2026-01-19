@@ -76,7 +76,7 @@ En otra terminal (dejando Anvil corriendo):
 cd sc
 
 # Crear archivo .env con la primera private key de Anvil
-echo "PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" > .env
+echo "PRIVATE_KEY=" > .env
 
 # Desplegar
 forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
@@ -106,16 +106,16 @@ cp env.example .env.local
 
 ```env
 # Reemplazar con las direcciones del deployment
-NEXT_PUBLIC_DAO_ADDRESS=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-NEXT_PUBLIC_FORWARDER_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+NEXT_PUBLIC_DAO_ADDRESS=
+NEXT_PUBLIC_FORWARDER_ADDRESS=
 
 # Configuración de red local
 NEXT_PUBLIC_CHAIN_ID=31337
 NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8545
 
 # Relayer - usar cuenta (1) de Anvil
-RELAYER_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
-RELAYER_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+RELAYER_PRIVATE_KEY=
+RELAYER_ADDRESS=
 RPC_URL=http://127.0.0.1:8545
 ```
 

@@ -16,9 +16,42 @@ Esta guía te muestra cómo probar el flujo completo de un proposal sin esperar 
 - ⚠️ Necesitas **`evm_increaseTime`** + **`evm_mine`** para avanzar el tiempo
 - ✅ Perfecto para testing rápido sin esperar días reales
 
+## 🔄 Actualización Reactiva del Estado en el Frontend
+
+**⚠️ IMPORTANTE**: El frontend consulta el `block.timestamp` cada 2 segundos para actualizar el estado de los proposals automáticamente (Active → Approved/Rejected) sin necesidad de recargar la página.
+
+### ❌ Problema Común: "El estado no cambia"
+
+Si el estado del proposal no cambia después del deadline:
+
+**Razón**: En Anvil modo default, los bloques solo se minan cuando hay transacciones. Si no hay transacciones, el `block.timestamp` no avanza.
+
+### ✅ Soluciones:
+
+**Opción 1: Iniciar Anvil con auto-minado (Recomendado)**
+```bash
+# Reinicia Anvil con minado automático cada 5 segundos
+anvil --block-time 5
+```
+Con esto, el frontend verá cambios de estado automáticamente sin intervención manual.
+
+**Opción 2: Minar bloques manualmente**
+```bash
+# Mina un bloque para actualizar el timestamp
+cast rpc evm_mine --rpc-url http://127.0.0.1:8545
+```
+Después de minar, el frontend detectará el cambio en ~2 segundos.
+
+**Opción 3: Cualquier transacción mina un bloque**
+- Hacer un depósito al DAO
+- Crear otro proposal
+- Votar en cualquier proposal
+
+Cualquiera de estas acciones minará un nuevo bloque y el estado se actualizará.
+
 ## 📋 Prerequisitos
 
-- Anvil corriendo en `http://127.0.0.1:8545`
+- Anvil corriendo en `http://127.0.0.1:8545` (recomendado con `--block-time 5`)
 - Tener Foundry instalado (para usar `cast`)
 
 ## 🚀 Flujo de Prueba Rápido

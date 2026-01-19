@@ -29,10 +29,11 @@ export function ProposalCard({ proposal: initialProposal, onVoteComplete }: Prop
     loadUserVote();
   }, [account, proposal.id]);
 
-  // Update block time every 5 seconds to reflect deadline changes
+  // Update block time every 2 seconds to reflect deadline changes
   useEffect(() => {
     const updateBlockTime = async () => {
       const timestamp = await getBlockTimestamp();
+      console.log(`[ProposalCard] Block timestamp updated: ${timestamp} (${new Date(timestamp * 1000).toISOString()})`);
       setBlockTime(timestamp);
     };
 
@@ -40,7 +41,7 @@ export function ProposalCard({ proposal: initialProposal, onVoteComplete }: Prop
     
     const interval = setInterval(() => {
       updateBlockTime();
-    }, 5000);
+    }, 2000); // Poll every 2 seconds for more responsive updates
 
     return () => clearInterval(interval);
   }, [getBlockTimestamp]);

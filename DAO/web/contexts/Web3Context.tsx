@@ -60,6 +60,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       setForwarderContract(forwarder);
       setChainId(Number(network.chainId));
 
+      // Save connection state to localStorage
+      localStorage.setItem("walletConnected", "true");
+
       // Load balances
       await loadBalances(dao, accounts[0]);
 
@@ -78,6 +81,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     setUserBalance("0");
     setDaoTotalBalance("0");
     setChainId(null);
+    
+    // Remove connection state from localStorage
+    localStorage.removeItem("walletConnected");
   };
 
   const loadBalances = async (dao: Contract, userAddress: string) => {
@@ -111,6 +117,34 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       return Math.floor(Date.now() / 1000); // Fallback to system time
     }
   };
+
+  // Auto-connect on page load if previously connected
+  useEffect(() => {
+    const autoConnect = async () => {
+      const wasConnected = localStorage.getItem("walletConnected");
+      
+      if (wasConnected === "true" && typeof window.ethereum !== "undefined") {
+        try {
+          const browserProvider = new BrowserProvider(window.ethereum);
+          // Check if already connected (don't prompt user)
+          const accounts = await browserProvider.send("eth_accounts", []);
+          
+          if (accounts.length > 0) {
+            console.log("Auto-reconnecting wallet...");
+            await connectWallet();
+          } else {
+            // User disconnected from MetaMask, clear localStorage
+            localStorage.removeItem("walletConnected");
+          }
+        } catch (error) {
+          console.error("Auto-connect failed:", error);
+          localStorage.removeItem("walletConnected");
+        }
+      }
+    };
+
+    autoConnect();
+  }, []); // Run only once on mount
 
   // Handle account changes
   useEffect(() => {
