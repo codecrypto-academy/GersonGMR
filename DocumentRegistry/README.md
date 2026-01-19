@@ -75,7 +75,7 @@ cd GersonGMR/DocumentRegistry
 
 2. **Instalar dependencias del smart contract:**
 ```bash
-forge install
+forge install foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts
 ```
 
 3. **Instalar dependencias del frontend:**
@@ -134,7 +134,7 @@ Anvil iniciará en `http://127.0.0.1:8545` con 10 cuentas pre-fundadas.
 
 Primero, crear un archivo `.env` en la raíz del proyecto con:
 ```env
-PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+PRIVATE_KEY=
 ```
 
 Luego desplegar:
@@ -151,7 +151,7 @@ forge script script/Deploy.s.sol:DeployScript --rpc-url http://127.0.0.1:8545 --
 3. **Copiar la dirección del contrato desplegado:**
 Después del despliegue, copiar la dirección mostrada en la consola y actualizarla en `frontend/.env.local`:
 ```env
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+NEXT_PUBLIC_CONTRACT_ADDRESS=
 ```
 
 4. **Exportar ABI (opcional):**

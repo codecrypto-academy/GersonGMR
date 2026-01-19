@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {ECDSA} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title DocumentRegistry
@@ -196,8 +197,8 @@ contract DocumentRegistry {
         bytes32 hash,
         bytes calldata signature
     ) internal pure returns (address recovered) {
-        // Crear el hash del mensaje con prefijo Ethereum usando ECDSA
-        bytes32 ethSignedMessageHash = ECDSA.toEthSignedMessageHash(hash);
+        // Crear el hash del mensaje con prefijo Ethereum usando MessageHashUtils
+        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(hash);
 
         // Convertir calldata a memory de forma eficiente usando assembly
         bytes memory signatureMemory;
