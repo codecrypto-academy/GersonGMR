@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { BrowserProvider, Contract, formatEther, parseEther } from "ethers";
 import { DAOVotingABI, MinimalForwarderABI } from "@/lib/contracts";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 interface Web3ContextType {
   account: string | null;
@@ -62,9 +63,10 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       // Load balances
       await loadBalances(dao, accounts[0]);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error connecting wallet:", error);
-      alert("Error connecting wallet. Check console for details.");
+      const friendlyMessage = getErrorMessage(error);
+      alert(friendlyMessage);
     }
   };
 

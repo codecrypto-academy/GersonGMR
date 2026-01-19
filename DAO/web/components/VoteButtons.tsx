@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { VoteType } from "@/lib/contracts";
 import { signMetaTransaction } from "@/lib/gasless";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 interface VoteButtonsProps {
   proposalId: bigint;
@@ -47,7 +48,7 @@ export function VoteButtons({ proposalId, onVoteComplete }: VoteButtonsProps) {
 
     } catch (error: any) {
       console.error("Error voting:", error);
-      setMessage(`❌ Error: ${error.message || "Vote failed"}`);
+      setMessage(`❌ ${getErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }

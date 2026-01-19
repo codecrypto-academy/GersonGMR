@@ -5,6 +5,7 @@ import { useWeb3 } from "@/contexts/Web3Context";
 import { VoteButtons } from "./VoteButtons";
 import { Proposal } from "@/lib/contracts";
 import { formatEther } from "ethers";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 interface ProposalCardProps {
   proposal: Proposal;
@@ -97,7 +98,7 @@ export function ProposalCard({ proposal: initialProposal, onVoteComplete }: Prop
       }, 2000);
     } catch (error: any) {
       console.error("Error executing proposal:", error);
-      setMessage(`❌ Error: ${error.message || "Execution failed"}`);
+      setMessage(`❌ ${getErrorMessage(error)}`);
     } finally {
       setExecuting(false);
     }

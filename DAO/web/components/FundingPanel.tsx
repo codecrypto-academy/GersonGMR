@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { parseEther } from "ethers";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 export function FundingPanel() {
   const { daoContract, daoTotalBalance, refreshBalances } = useWeb3();
@@ -48,7 +49,7 @@ export function FundingPanel() {
       setTimeout(() => setMessage(""), 5000);
     } catch (error: any) {
       console.error("Error funding DAO:", error);
-      setMessage(`❌ Error: ${error.message || "Transaction failed"}`);
+      setMessage(`❌ ${getErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }

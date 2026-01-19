@@ -69,11 +69,20 @@ export async function POST(request: NextRequest) {
     
     let errorMessage = error.message || "Unknown error";
     
-    // Extract revert reason if available
+    // Extract revert reason if available (contract error messages)
     if (error.reason) {
       errorMessage = error.reason;
     } else if (error.data?.message) {
       errorMessage = error.data.message;
+    } else if (error.error?.message) {
+      errorMessage = error.error.message;
+    } else if (typeof error.shortMessage === 'string') {
+      errorMessage = error.shortMessage;
+    }
+    
+    // Extract contract revert messages from error data
+    if (error.info?.error?.data?.message) {
+      errorMessage = error.info.error.data.message;
     }
 
     return NextResponse.json(

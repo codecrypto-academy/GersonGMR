@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { parseEther } from "ethers";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 interface CreateProposalProps {
   onProposalCreated?: () => void;
@@ -60,15 +61,7 @@ export function CreateProposal({ onProposalCreated }: CreateProposalProps) {
       
     } catch (error: any) {
       console.error("Error creating proposal:", error);
-      let errorMsg = "Transaction failed";
-      
-      if (error.message?.includes("Insufficient balance")) {
-        errorMsg = "You need at least 10% of the DAO balance to create a proposal";
-      } else if (error.message) {
-        errorMsg = error.message;
-      }
-      
-      setMessage(`❌ Error: ${errorMsg}`);
+      setMessage(`❌ ${getErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }
