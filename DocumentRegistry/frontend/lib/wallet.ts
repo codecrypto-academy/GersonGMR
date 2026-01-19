@@ -2,6 +2,11 @@
  * @file wallet.ts
  * @description Utility functions for deriving wallets from mnemonic
  */
+/**
+ * ⚠️ WARNING:
+ * This utility is for educational or local development purposes only.
+ * NEVER use mnemonics in production frontends.
+ */
 
 import { ethers } from "ethers";
 
