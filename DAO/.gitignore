@@ -1,0 +1,230 @@
+# ============================================
+# ARCHIVOS SENSIBLES - NUNCA SUBIR
+# ============================================
+
+# Variables de entorno con claves privadas
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Archivos de claves privadas
+*.key
+*.pem
+*.p12
+*.pfx
+*-key.json
+*_key.json
+keystore/
+keys/
+secrets/
+
+# Archivos de wallet
+*wallet*.json
+mnemonic.txt
+seed.txt
+
+# ============================================
+# SMART CONTRACTS (Foundry)
+# ============================================
+
+# Compilación
+sc/cache/
+sc/out/
+sc/broadcast/*/31337/
+sc/broadcast/**/dry-run/
+
+# Librerías de Foundry (se instalan con forge install)
+sc/lib/
+
+# Documentación generada
+sc/docs/
+
+# ============================================
+# FRONTEND (Next.js)
+# ============================================
+
+# Dependencias
+web/node_modules/
+web/.pnp
+web/.pnp.js
+web/.yarn/install-state.gz
+
+# Build de Next.js
+web/.next/
+web/out/
+web/build/
+web/dist/
+
+# TypeScript
+web/*.tsbuildinfo
+web/next-env.d.ts
+
+# ============================================
+# NODE.JS GENERAL
+# ============================================
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# Dependencias
+node_modules/
+jspm_packages/
+
+# Cache
+.npm
+.eslintcache
+.stylelintcache
+.cache
+
+# ============================================
+# SISTEMA OPERATIVO
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================
+# IDEs Y EDITORES
+# ============================================
+
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Cursor
+.cursor/
+
+# JetBrains (IntelliJ, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# ============================================
+# TESTING Y COVERAGE
+# ============================================
+
+# Coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Testing
+.cache/
+sc/test-results/
+web/test-results/
+playwright-report/
+playwright/.cache/
+
+# ============================================
+# BUILD Y DEPLOYMENT
+# ============================================
+
+# Vercel
+.vercel
+
+# Deployment artifacts
+*.zip
+*.tar.gz
+*.rar
+
+# ============================================
+# TEMPORAL Y BACKUP
+# ============================================
+
+# Archivos temporales
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+
+# Backups
+backup/
+*.backup
+
+# ============================================
+# OTROS
+# ============================================
+
+# Hardhat (si se usa además de Foundry)
+artifacts/
+cache/
+typechain/
+typechain-types/
+
+# ABIs generados automáticamente
+**/abis/generated/
+
+# Certificados SSL locales
+*.crt
+*.cer
+*.der
+
+# Archivos de configuración local
+*.local
+
+# ============================================
+# EXCEPCIONES (archivos que SÍ queremos subir)
+# ============================================
+
+# Archivos de ejemplo
+!*.example
+!.env.example
+!env.example
+
+# Configuraciones importantes
+!.gitignore
+!.prettierrc
+!.eslintrc.json
