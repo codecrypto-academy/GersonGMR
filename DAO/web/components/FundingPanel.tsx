@@ -44,7 +44,9 @@ export function FundingPanel() {
       setAmount("");
       
       // Refresh balances
+      console.log('🔄 Refreshing balances after deposit...');
       await refreshBalances();
+      console.log('✅ Balance refresh complete');
       
       setTimeout(() => setMessage(""), 5000);
     } catch (error: any) {

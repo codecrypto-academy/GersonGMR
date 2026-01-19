@@ -24,7 +24,7 @@ anvil --version
 ### 2. Clonar o Navegar al Proyecto
 
 ```bash
-cd "c:\Users\ggers\IA Projects\GersonGMR\DAO"
+git checkout DAO
 ```
 
 ### 3. Setup de Smart Contracts
@@ -68,54 +68,74 @@ Private Keys
 ...
 ```
 
-### 5. Desplegar Contratos
+### 5. Desplegar Contratos (Automatizado)
 
 En otra terminal (dejando Anvil corriendo):
+
+**⭐ Opción Recomendada: Todo Automatizado**
+
+```bash
+# Desde la raíz del proyecto - UNO SOLO COMANDO
+bash scripts/deploy-and-sync.sh
+```
+
+Este script hace TODO automáticamente:
+- ✅ Compila contratos
+- ✅ Ejecuta tests  
+- ✅ Despliega a Anvil
+- ✅ Sincroniza ABIs al frontend
+- ✅ Crea/actualiza `.env.local`
+
+**🎉 ¡Puedes saltar al paso 7!** (el script ya configuró todo)
+
+**Opción Manual (si prefieres control total):**
 
 ```bash
 cd sc
 
-# Crear archivo .env con la primera private key de Anvil
-echo "PRIVATE_KEY=" > .env
-
 # Desplegar
 forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+
+# Sincronizar ABIs
+cd ..
+npm run sync:abis
 ```
 
-**📋 Guarda las direcciones de los contratos que se muestran!**
-
-Ejemplo de salida:
+**📋 Ejemplo de salida:**
 ```
-MinimalForwarder deployed at: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-DAOVoting deployed at: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+✅ Contracts deployed:
+   MinimalForwarder: address del contrato
+   DAOVoting: address del contrato
+
+✅ ABIs: Synced to web/lib/abis/
+✅ Environment: Updated in web/.env.local
 ```
 
 ### 6. Setup del Frontend
 
 ```bash
-cd ../web
+cd web
 
-# Instalar dependencias
+# Instalar dependencias (auto-sincroniza ABIs)
 npm install
-
-# Crear archivo .env.local
-cp env.example .env.local
 ```
 
-**Editar `.env.local`** con las direcciones de los contratos:
+**Si usaste `deploy-and-sync.sh`**: ✅ Ya está todo configurado, salta al paso 7
+
+**Si desplegaste manualmente**: Edita `.env.local` con las direcciones:
 
 ```env
 # Reemplazar con las direcciones del deployment
-NEXT_PUBLIC_DAO_ADDRESS=
-NEXT_PUBLIC_FORWARDER_ADDRESS=
+NEXT_PUBLIC_DAO_ADDRESS=0x...
+NEXT_PUBLIC_FORWARDER_ADDRESS=0x...
 
 # Configuración de red local
 NEXT_PUBLIC_CHAIN_ID=31337
 NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8545
 
 # Relayer - usar cuenta (1) de Anvil
-RELAYER_PRIVATE_KEY=
-RELAYER_ADDRESS=
+RELAYER_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+RELAYER_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
 RPC_URL=http://127.0.0.1:8545
 ```
 
@@ -211,14 +231,13 @@ Deberías tener **3 terminales** corriendo:
 
 ```bash
 # Terminal con Anvil: Ctrl+C, luego
-anvil
+anvil --block-time 5
 
-# Volver a desplegar contratos
-cd sc
-forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+# Volver a desplegar TODO automáticamente
+bash scripts/deploy-and-sync.sh
 
-# Actualizar .env.local con nuevas direcciones
-# Reiniciar frontend: Ctrl+C, luego
+# Reiniciar frontend: Ctrl+C en terminal del frontend, luego
+cd web
 npm run dev
 ```
 
@@ -289,8 +308,16 @@ Ahora tienes un DAO completamente funcional con votación gasless!
 
 - Experimentar con múltiples cuentas
 - Probar el daemon de ejecución automática: `curl http://localhost:3000/api/daemon`
-- Modificar los contratos y volver a desplegar
+- Modificar los contratos y volver a desplegar con `bash scripts/deploy-and-sync.sh`
 - Explorar el código y aprender
+
+### 📚 Documentación Adicional
+
+- **`README.md`** - Documentación completa del proyecto
+- **`ABI_WORKFLOW.md`** - Sistema automatizado de ABIs
+- **`QUICKSTART_ABI.md`** - Guía rápida de ABIs
+- **`TIME_TRAVEL_GUIDE.md`** - Testing con Anvil time manipulation
+- **`PRODUCTION_SECURITY.md`** - Seguridad para producción
 
 ---
 

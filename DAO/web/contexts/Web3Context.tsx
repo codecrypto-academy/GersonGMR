@@ -88,11 +88,18 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
   const loadBalances = async (dao: Contract, userAddress: string) => {
     try {
+      console.log('🔄 Loading balances for:', userAddress);
       const userBal = await dao.getUserBalance(userAddress);
       const totalBal = await dao.totalBalance();
       
+      console.log('💰 User balance (raw):', userBal.toString());
+      console.log('💰 User balance (ETH):', formatEther(userBal));
+      console.log('🏦 Total DAO balance (ETH):', formatEther(totalBal));
+      
       setUserBalance(formatEther(userBal));
       setDaoTotalBalance(formatEther(totalBal));
+      
+      console.log('✅ Balances updated in state');
     } catch (error) {
       console.error("Error loading balances:", error);
     }

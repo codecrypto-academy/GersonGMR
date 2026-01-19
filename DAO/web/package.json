@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "sync:abis": "node ../scripts/sync-abis.js",
+    "postinstall": "npm run sync:abis"
   },
   "dependencies": {
     "react": "^19.0.0",

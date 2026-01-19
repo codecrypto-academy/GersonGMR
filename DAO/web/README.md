@@ -35,21 +35,25 @@ web/
 │   └── Web3Context.tsx        # Context de Web3
 │
 └── lib/
-    ├── contracts.ts           # ABIs y tipos
-    └── gasless.ts             # Lógica EIP-712
+    ├── abis/
+    │   └── index.ts           # ABIs auto-generados
+    ├── contracts.ts           # Exports de ABIs
+    ├── gasless.ts             # Lógica EIP-712
+    └── errorHandler.ts        # Manejo de errores
 ```
 
 ## 🚀 Instalación
 
 ```bash
-# Instalar dependencias
+# Instalar dependencias (auto-sincroniza ABIs)
 npm install
 
-# Copiar archivo de ejemplo
-cp env.example .env.local
-
-# Editar .env.local con tus valores
+# Los ABIs se sincronizan automáticamente desde Foundry
+# Para sincronizar manualmente:
+npm run sync:abis
 ```
+
+**Nota**: No necesitas copiar `env.example` si usas el script de deploy automatizado (`bash scripts/deploy-and-sync.sh` desde la raíz)
 
 ## ⚙️ Configuración
 
@@ -76,6 +80,9 @@ RPC_URL=http://127.0.0.1:8545
 # Desarrollo
 npm run dev
 
+# Sincronizar ABIs desde contratos
+npm run sync:abis
+
 # Build para producción
 npm run build
 
@@ -85,6 +92,8 @@ npm run start
 # Linter
 npm run lint
 ```
+
+**ABIs Automatizados**: Los ABIs se generan automáticamente desde Foundry. Ver `ABI_WORKFLOW.md` en la raíz del proyecto.
 
 ## 🧩 Componentes Principales
 
@@ -247,9 +256,28 @@ El diseño es totalmente responsive:
 
 ## 🧪 Testing Local
 
+**Opción Rápida (Recomendada):**
+
 1. Iniciar Anvil:
 ```bash
-anvil
+anvil --block-time 5
+```
+
+2. Deploy automatizado (desde raíz):
+```bash
+bash scripts/deploy-and-sync.sh
+```
+
+3. Iniciar frontend:
+```bash
+cd web && npm run dev
+```
+
+**Opción Manual:**
+
+1. Iniciar Anvil:
+```bash
+anvil --block-time 5
 ```
 
 2. Desplegar contratos:
@@ -258,11 +286,11 @@ cd ../sc
 forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 ```
 
-3. Configurar `.env.local` con direcciones
+3. Sincronizar ABIs y configurar `.env.local` manualmente
 
 4. Iniciar frontend:
 ```bash
-npm run dev
+cd web && npm run dev
 ```
 
 5. Abrir `http://localhost:3000`

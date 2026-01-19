@@ -1,0 +1,2 @@
+# This file ensures the abis directory is tracked by git
+# ABIs are generated from Foundry and synced automatically

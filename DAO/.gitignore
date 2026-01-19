@@ -204,8 +204,11 @@ cache/
 typechain/
 typechain-types/
 
-# ABIs generados automáticamente
-**/abis/generated/
+# ABIs - Los ABIs JSON se versionan para distribución pública
+# Se generan con `npm run sync:abis` desde los contratos de Foundry
+# Los archivos JSON son el formato estándar para integración con otros proyectos
+!web/lib/abis/*.json
+web/lib/abis/*.tmp
 
 # Certificados SSL locales
 *.crt

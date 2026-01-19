@@ -4,6 +4,8 @@ import { useWeb3 } from "@/contexts/Web3Context";
 
 export function ConnectWallet() {
   const { account, connectWallet, disconnectWallet, userBalance, chainId } = useWeb3();
+  
+  console.log('[ConnectWallet] Current userBalance:', userBalance);
 
   const shortenAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;

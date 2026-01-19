@@ -2,6 +2,8 @@
 
 Sistema completo de DAO (Organización Autónoma Descentralizada) que permite a los usuarios votar propuestas **sin pagar gas**, utilizando meta-transacciones (EIP-2771).
 
+> **🚀 Inicio Rápido**: Si clonas este proyecto, ve directo a **[`SETUP_GUIDE.md`](SETUP_GUIDE.md)** para instrucciones paso a paso.
+
 ## 📋 Características
 
 - ✅ **Votación Gasless**: Los usuarios pueden votar sin pagar gas usando meta-transacciones EIP-2771
@@ -104,7 +106,23 @@ anvil
 
 Anvil generará varias cuentas con claves privadas. **Guarda estas claves** para usarlas más adelante.
 
-### 4. Desplegar Contratos
+### 4. Desplegar Contratos (Automatizado)
+
+**Opción A: Deploy Completo Automatizado (Recomendado)**
+
+```bash
+# Desde la raíz del proyecto - hace TODO en un solo comando
+bash scripts/deploy-and-sync.sh
+```
+
+Este script automáticamente:
+- ✅ Compila contratos
+- ✅ Ejecuta tests
+- ✅ Despliega a Anvil
+- ✅ Sincroniza ABIs al frontend
+- ✅ Actualiza `.env.local` con direcciones
+
+**Opción B: Deploy Manual**
 
 ```bash
 # Crear archivo .env en la carpeta sc/
@@ -113,6 +131,10 @@ echo "PRIVATE_KEY=0x..." > .env
 
 # Desplegar en red local
 forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+
+# Sincronizar ABIs
+cd ..
+npm run sync:abis
 ```
 
 **Guarda las direcciones de los contratos** que se muestran en la consola.
@@ -122,14 +144,13 @@ forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 ```bash
 cd ../web
 
-# Instalar dependencias
+# Instalar dependencias (auto-sincroniza ABIs)
 npm install
-
-# Crear archivo .env.local
-cp env.example .env.local
 ```
 
-Editar `.env.local` con las direcciones de los contratos:
+**Si usaste `deploy-and-sync.sh`**: El archivo `.env.local` ya está configurado ✅
+
+**Si no**: Editar `.env.local` con las direcciones de los contratos:
 
 ```env
 NEXT_PUBLIC_DAO_ADDRESS=0x...              # Dirección del DAOVoting
@@ -137,9 +158,9 @@ NEXT_PUBLIC_FORWARDER_ADDRESS=0x...        # Dirección del MinimalForwarder
 NEXT_PUBLIC_CHAIN_ID=31337
 NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8545
 
-# Configuración del Relayer (usar una de las cuentas de Anvil)
-RELAYER_PRIVATE_KEY=0x...                  # Clave privada del relayer
-RELAYER_ADDRESS=0x...                      # Dirección pública del relayer
+# Configuración del Relayer (usar cuenta (1) de Anvil)
+RELAYER_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+RELAYER_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
 RPC_URL=http://127.0.0.1:8545
 ```
 
@@ -231,6 +252,20 @@ Las propuestas aprobadas pueden ejecutarse de dos formas:
 - ❌ Crear propuesta sin balance suficiente
 
 ## 🔧 Comandos Útiles
+
+### Deploy y ABIs
+
+```bash
+# Deploy completo (recomendado)
+bash scripts/deploy-and-sync.sh
+
+# Solo sincronizar ABIs
+npm run sync:abis
+
+# ABIs se sincronizan automáticamente en:
+# - npm install (hook postinstall)
+# - npm run sync:abis (manual)
+```
 
 ### Smart Contracts
 
@@ -336,7 +371,49 @@ forge test
 2. Revisa los logs del servidor (`npm run dev`)
 3. Verifica las direcciones en `.env.local`
 
-## 📚 Recursos
+## 📚 Documentación del Proyecto
+
+### Guías de Inicio
+
+- **`README.md`** (este archivo) - Documentación completa del proyecto
+- **`SETUP_GUIDE.md`** - Guía paso a paso para configurar el proyecto (⭐ empieza aquí)
+
+### Documentación Técnica
+
+- **`sc/README.md`** - Documentación de los smart contracts
+- **`web/README.md`** - Documentación del frontend
+- **`web/lib/abis/README.md`** - ABIs y cómo usarlos en otros proyectos
+- **`ABI_WORKFLOW.md`** - Sistema automatizado de ABIs (workflow + distribución)
+- **`ERROR_HANDLING.md`** - Sistema de manejo de errores
+- **`TIME_TRAVEL_GUIDE.md`** - Testing con manipulación de tiempo en Anvil
+- **`SECURITY.md`** - Consideraciones de seguridad
+- **`CHANGELOG.md`** - Historial de cambios del proyecto
+
+### Scripts y Herramientas
+
+- **`scripts/deploy-and-sync.sh`** - Deploy automatizado completo
+- **`scripts/sync-abis.js`** - Sincronización automática de ABIs
+- **`auto-mine.sh`** - Script para minado automático en Anvil
+- **`test-proposal-flow.sh`** - Script de testing del flujo completo
+
+### 🌍 ABIs Públicos (Para Integración Externa)
+
+Los ABIs están disponibles en formato JSON para que CUALQUIERA pueda integrarlos:
+
+- **`web/lib/abis/DAOVoting.json`** - ABI del contrato principal del DAO
+- **`web/lib/abis/MinimalForwarder.json`** - ABI del forwarder de meta-transacciones
+
+**Compatible con:** JavaScript, TypeScript, Python, Go, Rust, Java, y cualquier lenguaje web3
+
+**Ver:**
+- [`web/lib/abis/README.md`](web/lib/abis/README.md) - Ejemplos de integración multi-lenguaje
+- [`ABI_WORKFLOW.md`](ABI_WORKFLOW.md) - Sistema automatizado y distribución
+
+### Archivos de Referencia
+
+- **`TASK.md`** - Requisitos originales del proyecto (referencia histórica)
+
+## 📚 Recursos Externos
 
 - [EIP-2771 Standard](https://eips.ethereum.org/EIPS/eip-2771)
 - [Foundry Book](https://book.getfoundry.sh/)
