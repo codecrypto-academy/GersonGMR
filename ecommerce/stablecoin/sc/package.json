@@ -1,0 +1,17 @@
+{
+  "name": "eurotoken",
+  "version": "1.0.0",
+  "description": "EuroToken ERC20 Stablecoin",
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "test:verbose": "forge test -vvv",
+    "deploy:local": "forge script script/DeployEuroToken.s.sol --rpc-url http://localhost:8545 --broadcast",
+    "deploy:anvil": "forge script script/DeployEuroToken.s.sol --rpc-url anvil --broadcast",
+    "fmt": "forge fmt",
+    "clean": "forge clean"
+  },
+  "keywords": ["solidity", "erc20", "stablecoin", "foundry"],
+  "author": "",
+  "license": "MIT"
+}
