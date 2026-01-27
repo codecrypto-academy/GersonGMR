@@ -33,16 +33,28 @@ export async function POST(request: NextRequest) {
   // Manejar evento de pago exitoso
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object as Stripe.PaymentIntent
-    const walletAddress = paymentIntent.metadata.walletAddress
-    const tokenAmount = paymentIntent.metadata.tokenAmount
+    const walletAddress = paymentIntent.metadata?.walletAddress
+    const tokenAmount = paymentIntent.metadata?.tokenAmount
+
+    console.log('[webhook] payment_intent.succeeded', {
+      paymentIntentId: paymentIntent.id,
+      walletAddress: walletAddress ?? '(empty)',
+      tokenAmount: tokenAmount ?? '(empty)',
+    })
 
     if (walletAddress && tokenAmount) {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : request.nextUrl.origin)
+      const mintUrl = `${baseUrl.replace(/\/$/, '')}/api/mint-tokens`
+
       try {
-        // Llamar al endpoint de mint
-        const response = await fetch(`${request.nextUrl.origin}/api/mint-tokens`, {
+        const mintSecret = process.env.MINT_INTERNAL_SECRET
+        const response = await fetch(mintUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(mintSecret && { 'x-mint-internal-secret': mintSecret }),
           },
           body: JSON.stringify({
             walletAddress,
@@ -50,12 +62,17 @@ export async function POST(request: NextRequest) {
           }),
         })
 
-        if (!response.ok) {
-          console.error('Error minting tokens:', await response.text())
+        const text = await response.text()
+        if (response.ok) {
+          console.log('[webhook] mint-tokens OK', text)
+        } else {
+          console.error('[webhook] mint-tokens failed', response.status, text)
         }
       } catch (error) {
-        console.error('Error calling mint endpoint:', error)
+        console.error('[webhook] Error calling mint endpoint:', error)
       }
+    } else {
+      console.warn('[webhook] payment_intent.succeeded sin walletAddress o tokenAmount; no se llama a mint-tokens')
     }
   }
 

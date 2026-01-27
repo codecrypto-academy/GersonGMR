@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ethers } from 'ethers'
 import { EcommerceABI } from '@/lib/contracts'
-import { useRouter } from 'next/navigation'
+import { useWallet } from '@/contexts/WalletContext'
 
 const ECOMMERCE_ADDRESS = process.env.NEXT_PUBLIC_ECOMMERCE_CONTRACT_ADDRESS || ''
 const PAYMENT_GATEWAY_URL = process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_URL || 'http://localhost:6002'
@@ -21,17 +21,11 @@ interface Product {
 }
 
 export default function CartPage() {
-  const router = useRouter()
-  const [walletAddress, setWalletAddress] = useState<string>('')
-  const [isConnected, setIsConnected] = useState(false)
+  const { walletAddress, isConnected, connectWallet } = useWallet()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [products, setProducts] = useState<Map<number, Product>>(new Map())
   const [total, setTotal] = useState<string>('0')
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    checkConnection()
-  }, [])
 
   const loadCart = useCallback(async () => {
     try {
@@ -73,21 +67,6 @@ export default function CartPage() {
       loadCart()
     }
   }, [isConnected, walletAddress, loadCart])
-
-  const checkConnection = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum)
-        const accounts = await provider.listAccounts()
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0].address)
-          setIsConnected(true)
-        }
-      } catch (err) {
-        console.error('Error checking connection:', err)
-      }
-    }
-  }
 
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
@@ -151,7 +130,7 @@ export default function CartPage() {
         <div className="text-center">
           <p className="text-xl mb-4">Por favor conecta tu wallet para ver el carrito</p>
           <button
-            onClick={checkConnection}
+            onClick={connectWallet}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
           >
             Conectar Wallet

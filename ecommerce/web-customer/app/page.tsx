@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ethers } from 'ethers'
 import { EcommerceABI } from '@/lib/contracts'
 import ProductCard from '@/components/ProductCard'
+import { useWallet } from '@/contexts/WalletContext'
 
 const ECOMMERCE_ADDRESS = process.env.NEXT_PUBLIC_ECOMMERCE_CONTRACT_ADDRESS || ''
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://localhost:8545'
@@ -20,48 +21,13 @@ interface Product {
 }
 
 export default function Home() {
+  const { walletAddress, isConnected } = useWallet()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [walletAddress, setWalletAddress] = useState<string>('')
-  const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
     loadProducts()
-    checkConnection()
   }, [])
-
-  const checkConnection = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum)
-        const accounts = await provider.listAccounts()
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0].address)
-          setIsConnected(true)
-        }
-      } catch (err) {
-        console.error('Error checking connection:', err)
-      }
-    }
-  }
-
-  const connectWallet = async () => {
-    if (typeof window.ethereum === 'undefined') {
-      alert('MetaMask no está instalado')
-      return
-    }
-
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      await provider.send('eth_requestAccounts', [])
-      const signer = await provider.getSigner()
-      const address = await signer.getAddress()
-      setWalletAddress(address)
-      setIsConnected(true)
-    } catch (err) {
-      console.error('Error connecting wallet:', err)
-    }
-  }
 
   const loadProducts = async () => {
     try {
@@ -76,7 +42,7 @@ export default function Home() {
         description: p.description,
         price: ethers.formatUnits(p.price, 6),
         stock: Number(p.stock),
-        ipfsImageHash: p.ipfsImageHash,
+        ipfsImageHash: typeof p.ipfsImageHash === 'string' ? p.ipfsImageHash : (p[6] ?? ''),
         isActive: p.isActive,
       }))
       
@@ -95,14 +61,7 @@ export default function Home() {
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
             Catálogo de Productos
           </h1>
-          {!isConnected ? (
-            <button
-              onClick={connectWallet}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
-            >
-              Conectar Wallet
-            </button>
-          ) : (
+          {isConnected && (
             <div className="text-sm text-gray-600 dark:text-gray-400">
               <span className="font-mono">{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
             </div>

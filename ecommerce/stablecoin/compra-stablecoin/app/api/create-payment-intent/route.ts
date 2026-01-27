@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ethers } from 'ethers'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -16,9 +17,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!walletAddress) {
+    if (!walletAddress || typeof walletAddress !== 'string') {
       return NextResponse.json(
         { error: 'Wallet address requerida' },
+        { status: 400 }
+      )
+    }
+
+    if (!ethers.isAddress(walletAddress)) {
+      return NextResponse.json(
+        { error: 'Dirección de wallet inválida' },
         { status: 400 }
       )
     }

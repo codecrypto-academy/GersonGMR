@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ethers } from 'ethers'
 import { EcommerceABI } from '@/lib/contracts'
+import { useWallet } from '@/contexts/WalletContext'
 
 const ECOMMERCE_ADDRESS = process.env.NEXT_PUBLIC_ECOMMERCE_CONTRACT_ADDRESS || ''
 
@@ -21,14 +22,9 @@ interface Invoice {
 }
 
 export default function OrdersPage() {
-  const [walletAddress, setWalletAddress] = useState<string>('')
-  const [isConnected, setIsConnected] = useState(false)
+  const { walletAddress, isConnected, connectWallet } = useWallet()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    checkConnection()
-  }, [])
 
   const loadInvoices = useCallback(async () => {
     try {
@@ -64,26 +60,17 @@ export default function OrdersPage() {
     }
   }, [isConnected, walletAddress, loadInvoices])
 
-  const checkConnection = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum)
-        const accounts = await provider.listAccounts()
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0].address)
-          setIsConnected(true)
-        }
-      } catch (err) {
-        console.error('Error checking connection:', err)
-      }
-    }
-  }
-
   if (!isConnected) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl mb-4">Por favor conecta tu wallet para ver tus pedidos</p>
+          <button
+            onClick={connectWallet}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+          >
+            Conectar Wallet
+          </button>
         </div>
       </div>
     )

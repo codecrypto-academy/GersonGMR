@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
-import { Elements } from '@stripe/react-stripe-js'
-import { ethers } from 'ethers'
 import EuroTokenPurchase from '@/components/EuroTokenPurchase'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
@@ -29,10 +27,8 @@ export default function Home() {
           <p className="text-center text-gray-600 dark:text-gray-300 mb-8">
             1 EURT = 1 EUR. Compra tokens con tu tarjeta de crédito.
           </p>
-          
-          <Elements stripe={stripePromise}>
-            <EuroTokenPurchase />
-          </Elements>
+
+          <EuroTokenPurchase stripePromise={stripePromise} />
         </div>
       </div>
     </main>

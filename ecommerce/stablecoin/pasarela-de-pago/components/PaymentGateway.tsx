@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ethers } from 'ethers'
 import { EuroTokenABI, EcommerceABI } from '@/lib/contracts'
 
 const EUROTOKEN_ADDRESS = process.env.NEXT_PUBLIC_EUROTOKEN_CONTRACT_ADDRESS || ''
 const ECOMMERCE_ADDRESS = process.env.NEXT_PUBLIC_ECOMMERCE_CONTRACT_ADDRESS || ''
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://localhost:8545'
+const DISCONNECT_STORAGE_KEY = 'pasarela-de-pago_wallet_disconnected'
 
 interface PaymentGatewayProps {
   merchantAddress: string
@@ -31,17 +32,8 @@ export default function PaymentGateway({
   const [success, setSuccess] = useState<string>('')
   const [txHash, setTxHash] = useState<string>('')
 
-  useEffect(() => {
-    checkConnection()
-  }, [])
-
-  useEffect(() => {
-    if (isConnected && walletAddress) {
-      loadBalance()
-    }
-  }, [isConnected, walletAddress])
-
-  const checkConnection = async () => {
+  const checkConnection = useCallback(async () => {
+    if (typeof window === 'undefined' || localStorage.getItem(DISCONNECT_STORAGE_KEY) === '1') return
     if (typeof window.ethereum !== 'undefined') {
       try {
         const provider = new ethers.BrowserProvider(window.ethereum)
@@ -54,7 +46,35 @@ export default function PaymentGateway({
         console.error('Error checking connection:', err)
       }
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    checkConnection()
+  }, [checkConnection])
+
+  useEffect(() => {
+    if (isConnected && walletAddress) {
+      loadBalance()
+    }
+  }, [isConnected, walletAddress])
+
+  useEffect(() => {
+    if (typeof window.ethereum === 'undefined') return
+    const onAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        setWalletAddress('')
+        setIsConnected(false)
+        return
+      }
+      if (localStorage.getItem(DISCONNECT_STORAGE_KEY) === '1') return
+      setWalletAddress(accounts[0])
+      setIsConnected(true)
+    }
+    window.ethereum.on('accountsChanged', onAccountsChanged)
+    return () => {
+      window.ethereum.removeListener('accountsChanged', onAccountsChanged)
+    }
+  }, [])
 
   const connectWallet = async () => {
     if (typeof window.ethereum === 'undefined') {
@@ -63,17 +83,37 @@ export default function PaymentGateway({
     }
 
     try {
+      if (localStorage.getItem(DISCONNECT_STORAGE_KEY) === '1') {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_revokePermissions',
+            params: [{ eth_accounts: {} }],
+          })
+        } catch {
+          // Si la wallet no soporta revokePermissions, seguimos normal
+        }
+      }
       const provider = new ethers.BrowserProvider(window.ethereum)
       await provider.send('eth_requestAccounts', [])
       const signer = await provider.getSigner()
       const address = await signer.getAddress()
-      
+
       setWalletAddress(address)
       setIsConnected(true)
       setError('')
+      localStorage.removeItem(DISCONNECT_STORAGE_KEY)
     } catch (err: any) {
       setError('Error al conectar wallet: ' + err.message)
     }
+  }
+
+  const disconnectWallet = () => {
+    setWalletAddress('')
+    setIsConnected(false)
+    setError('')
+    setSuccess('')
+    setTxHash('')
+    localStorage.setItem(DISCONNECT_STORAGE_KEY, '1')
   }
 
   const loadBalance = async () => {
@@ -180,11 +220,24 @@ export default function PaymentGateway({
         </div>
       ) : (
         <>
-          <div className="mb-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Wallet conectada:</p>
-            <p className="font-mono text-sm break-all">{walletAddress}</p>
+          <div className="mb-6 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              Wallet conectada
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100" title={walletAddress}>
+                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+              </p>
+              <button
+                type="button"
+                onClick={disconnectWallet}
+                className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
+              >
+                Desconectar
+              </button>
+            </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              Balance: <span className="font-bold">{balance} EURT</span>
+              Balance: <span className="font-bold text-gray-900 dark:text-white">{balance} EURT</span>
             </p>
             {parseFloat(balance) < parseFloat(amount) && (
               <p className="text-red-500 text-sm mt-2">

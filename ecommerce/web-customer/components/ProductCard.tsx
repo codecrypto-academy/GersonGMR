@@ -7,6 +7,17 @@ import { EcommerceABI } from '@/lib/contracts'
 
 const ECOMMERCE_ADDRESS = process.env.NEXT_PUBLIC_ECOMMERCE_CONTRACT_ADDRESS || ''
 
+/** Extrae solo el CID de un valor que puede ser "Qm...", "ipfs://Qm...", "https://ipfs.io/ipfs/Qm...", etc. */
+function getIpfsCid(value: string): string {
+  if (!value || typeof value !== 'string') return ''
+  const s = value.trim()
+  if (!s) return ''
+  const m = s.match(/\/ipfs\/([^/?#]+)/)
+  if (m) return m[1]
+  if (s.startsWith('ipfs://')) return s.slice(7).trim()
+  return s
+}
+
 interface Product {
   productId: number
   companyId: number
@@ -27,6 +38,13 @@ interface ProductCardProps {
 export default function ProductCard({ product, isConnected, walletAddress }: ProductCardProps) {
   const [loading, setLoading] = useState(false)
   const [quantity, setQuantity] = useState(1)
+  const [imgError, setImgError] = useState(false)
+
+  const ipfsCid = getIpfsCid(product.ipfsImageHash || '')
+  const showImage = ipfsCid && !imgError
+  const imageUrl = ipfsCid
+    ? `https://cloudflare-ipfs.com/ipfs/${ipfsCid}`
+    : ''
 
   const addToCart = async () => {
     if (!isConnected) {
@@ -53,17 +71,24 @@ export default function ProductCard({ product, isConnected, walletAddress }: Pro
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-      <div className="h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center relative">
-        {product.ipfsImageHash ? (
+      <div className="h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center relative overflow-hidden">
+        {showImage ? (
           <Image
-            src={`https://ipfs.io/ipfs/${product.ipfsImageHash}`}
+            src={imageUrl}
             alt={product.name}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            onError={() => setImgError(true)}
+            unoptimized
           />
         ) : (
-          <span className="text-gray-400">Sin imagen</span>
+          <div className="flex flex-col items-center justify-center gap-2 text-gray-400 dark:text-gray-500">
+            <svg className="w-12 h-12 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="text-xs font-medium">Sin imagen</span>
+          </div>
         )}
       </div>
       <div className="p-4">

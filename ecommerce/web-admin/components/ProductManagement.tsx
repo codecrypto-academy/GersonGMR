@@ -151,8 +151,11 @@ export default function ProductManagement({ walletAddress, companyId }: ProductM
                 value={formData.ipfsImageHash}
                 onChange={(e) => setFormData({ ...formData, ipfsImageHash: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
-                placeholder="Qm..."
+                placeholder="Qm... o bafybei..."
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Opcional. Sube la imagen en <a href="https://app.pinata.cloud" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">Pinata</a>, <a href="https://web3.storage" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">web3.storage</a> o similar y pega aquí solo el CID (ej. QmXyz… o bafybei…).
+              </p>
             </div>
           </div>
           <button

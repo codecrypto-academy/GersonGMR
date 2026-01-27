@@ -172,9 +172,18 @@ NEXT_PUBLIC_PAYMENT_GATEWAY_URL=http://localhost:6002
 ### 2. Configurar Stripe
 
 1. Crea una cuenta en [Stripe](https://stripe.com)
-2. Obtén tus API keys desde el dashboard
-3. Configura webhooks apuntando a `http://localhost:6001/api/webhook`
-4. Usa el webhook secret en las variables de entorno
+2. Obtén tus API keys desde el dashboard (Developers → API keys) y ponlas en `compra-stablecoin/.env.local`
+3. **Webhooks en local con Stripe CLI** (recomendado, sin ngrok):
+   - Instala [Stripe CLI](https://stripe.com/docs/stripe-cli)
+   - Inicia sesión: `stripe login`
+   - En una terminal, con compra-stablecoin corriendo en el puerto 6001:
+     ```bash
+     stripe listen --forward-to localhost:6001/api/webhook
+     ```
+   - La CLI mostrará algo como: `Ready! Your webhook signing secret is whsec_xxxx...`
+   - Copia ese valor y ponlo en `STRIPE_WEBHOOK_SECRET` en `compra-stablecoin/.env.local`
+   - No hace falta crear el endpoint en el Dashboard: el listener de la CLI reenvía los eventos a tu app local
+4. Para producción: crea un endpoint en el Dashboard (Developers → Webhooks) con tu URL pública y usa su signing secret en `STRIPE_WEBHOOK_SECRET`
 
 ### 3. Configurar MetaMask
 
@@ -262,6 +271,10 @@ npm run dev
 # Terminal 4: Web Customer
 cd web-customer
 npm run dev
+
+# Terminal 5 (opcional): Stripe CLI para webhooks locales (solo si vas a probar compra de tokens)
+stripe listen --forward-to localhost:6001/api/webhook
+# Copia el whsec_... que muestra y ponlo en compra-stablecoin/.env.local como STRIPE_WEBHOOK_SECRET
 ```
 
 ### Acceder a las Aplicaciones
@@ -303,6 +316,16 @@ npm run dev
 1. En http://localhost:6003, ve a la pestaña "Facturas"
 2. Verás todas las facturas de tu empresa
 3. Puedes ver el estado (Pagada/Pendiente) y detalles
+
+### 5. IPFS Hash (imagen de producto)
+
+Al registrar productos en web-admin (puerto 6003), el campo **"IPFS Hash (imagen)"** es opcional. Si quieres que el producto muestre una imagen en la tienda:
+
+1. **Sube la imagen a IPFS** usando alguno de estos servicios (gratis):
+   - [Pinata](https://app.pinata.cloud): regístrate, sube el archivo y copia el **CID** que te dan.
+   - [web3.storage](https://web3.storage): sube el archivo y copia el CID.
+2. **Pega solo el CID** en el campo (ej. `QmXyz...` o `bafybei...`). No incluyas `ipfs://` ni la URL completa; la app construye `https://ipfs.io/ipfs/<CID>` automáticamente.
+3. Si lo dejas vacío, en la tienda se mostrará "Sin imagen".
 
 ## 📁 Estructura del Proyecto
 
@@ -430,9 +453,10 @@ kill -9 <PID>
 - Verifica que las variables de entorno están configuradas
 
 #### Stripe webhook no funciona
-- Usa [ngrok](https://ngrok.com) para exponer localhost
-- Configura el webhook en Stripe con la URL de ngrok
-- Verifica que STRIPE_WEBHOOK_SECRET está configurado
+- **En local**: usa el listener de Stripe CLI: `stripe listen --forward-to localhost:6001/api/webhook` y pon en `STRIPE_WEBHOOK_SECRET` el `whsec_...` que muestra la CLI (ver sección "Configurar Stripe")
+- Verifica que compra-stablecoin está en marcha en el puerto 6001 antes de lanzar `stripe listen`
+- Si prefieres ngrok: expón el puerto 6001, crea el endpoint en el Dashboard con `https://tu-subdominio.ngrok.io/api/webhook` y usa su signing secret
+- Comprueba que `STRIPE_WEBHOOK_SECRET` está en `compra-stablecoin/.env.local`
 
 ### Logs
 
