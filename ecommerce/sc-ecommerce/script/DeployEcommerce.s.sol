@@ -21,7 +21,7 @@ contract DeployEcommerce is Script {
         Ecommerce ecommerce = new Ecommerce(euroTokenAddress);
         
         console.log("Ecommerce deployed at:", address(ecommerce));
-        console.log("EuroToken address:", ecommerce.euroTokenAddress());
+        console.log("EuroToken address:", ecommerce.EURO_TOKEN_ADDRESS());
         
         vm.stopBroadcast();
         

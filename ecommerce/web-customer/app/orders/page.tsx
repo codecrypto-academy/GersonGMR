@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ethers } from 'ethers'
 import { EcommerceABI } from '@/lib/contracts'
 
@@ -30,33 +30,12 @@ export default function OrdersPage() {
     checkConnection()
   }, [])
 
-  useEffect(() => {
-    if (isConnected && walletAddress) {
-      loadInvoices()
-    }
-  }, [isConnected, walletAddress])
-
-  const checkConnection = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum)
-        const accounts = await provider.listAccounts()
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0].address)
-          setIsConnected(true)
-        }
-      } catch (err) {
-        console.error('Error checking connection:', err)
-      }
-    }
-  }
-
-  const loadInvoices = async () => {
+  const loadInvoices = useCallback(async () => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum)
       const contract = new ethers.Contract(ECOMMERCE_ADDRESS, EcommerceABI, provider)
       const invoicesData = await contract.getCustomerInvoices(walletAddress)
-      
+
       const formattedInvoices = invoicesData.map((inv: any) => ({
         invoiceId: Number(inv.invoiceId),
         companyId: Number(inv.companyId),
@@ -70,12 +49,33 @@ export default function OrdersPage() {
           unitPrice: ethers.formatUnits(item.unitPrice, 6),
         })),
       }))
-      
+
       setInvoices(formattedInvoices)
     } catch (err) {
       console.error('Error loading invoices:', err)
     } finally {
       setLoading(false)
+    }
+  }, [walletAddress])
+
+  useEffect(() => {
+    if (isConnected && walletAddress) {
+      loadInvoices()
+    }
+  }, [isConnected, walletAddress, loadInvoices])
+
+  const checkConnection = async () => {
+    if (typeof window.ethereum !== 'undefined') {
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum)
+        const accounts = await provider.listAccounts()
+        if (accounts.length > 0) {
+          setWalletAddress(accounts[0].address)
+          setIsConnected(true)
+        }
+      } catch (err) {
+        console.error('Error checking connection:', err)
+      }
     }
   }
 

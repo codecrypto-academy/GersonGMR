@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { ethers } from 'ethers'
 import { EcommerceABI } from '@/lib/contracts'
 
@@ -52,15 +53,14 @@ export default function ProductCard({ product, isConnected, walletAddress }: Pro
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-      <div className="h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+      <div className="h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center relative">
         {product.ipfsImageHash ? (
-          <img
+          <Image
             src={`https://ipfs.io/ipfs/${product.ipfsImageHash}`}
             alt={product.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none'
-            }}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         ) : (
           <span className="text-gray-400">Sin imagen</span>

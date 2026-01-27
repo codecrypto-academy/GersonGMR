@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./CompanyLib.sol";
-import "./ProductLib.sol";
-import "./CartLib.sol";
-import "./InvoiceLib.sol";
-import "./PaymentLib.sol";
+import {CompanyLib} from "./CompanyLib.sol";
+import {ProductLib} from "./ProductLib.sol";
+import {CartLib} from "./CartLib.sol";
+import {InvoiceLib} from "./InvoiceLib.sol";
+import {PaymentLib} from "./PaymentLib.sol";
 
 /**
  * @title Ecommerce
@@ -18,7 +17,6 @@ contract Ecommerce {
     using ProductLib for ProductLib.ProductStorage;
     using CartLib for CartLib.CartStorage;
     using InvoiceLib for InvoiceLib.InvoiceStorage;
-    using PaymentLib for PaymentLib;
 
     // Storage
     CompanyLib.CompanyStorage private companyStorage;
@@ -27,7 +25,7 @@ contract Ecommerce {
     InvoiceLib.InvoiceStorage private invoiceStorage;
 
     // Dirección del contrato EuroToken
-    address public immutable euroTokenAddress;
+    address public immutable EURO_TOKEN_ADDRESS;
 
     // Eventos
     event CompanyRegistered(uint256 indexed companyId, address indexed companyAddress, string name);
@@ -45,7 +43,7 @@ contract Ecommerce {
      */
     constructor(address _euroTokenAddress) {
         require(_euroTokenAddress != address(0), "Ecommerce: invalid EuroToken address");
-        euroTokenAddress = _euroTokenAddress;
+        EURO_TOKEN_ADDRESS = _euroTokenAddress;
     }
 
     // ============ FUNCIONES DE EMPRESAS ============
@@ -335,7 +333,7 @@ contract Ecommerce {
         
         // Procesa el pago
         bool success = PaymentLib.processPayment(
-            euroTokenAddress,
+            EURO_TOKEN_ADDRESS,
             customer,
             company.companyAddress,
             invoice.totalAmount
@@ -348,8 +346,17 @@ contract Ecommerce {
             productStorage.reduceStock(invoice.items[i].productId, invoice.items[i].quantity);
         }
         
-        // Marca factura como pagada
-        bytes32 txHash = keccak256(abi.encodePacked(block.timestamp, block.number, customer, invoiceId));
+        // Marca factura como pagada (assembly para optimización de gas)
+        bytes32 txHash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, timestamp())
+            mstore(add(ptr, 32), number())
+            mstore(add(ptr, 64), customer)
+            mstore(add(ptr, 96), invoiceId)
+            txHash := keccak256(ptr, 128)
+            mstore(0x40, add(ptr, 128))
+        }
         invoiceStorage.markAsPaid(invoiceId, txHash);
         
         emit PaymentProcessed(invoiceId, customer, company.companyAddress, invoice.totalAmount, txHash);
@@ -362,6 +369,6 @@ contract Ecommerce {
      * @return true si puede pagar
      */
     function canPay(address customer, uint256 amount) external view returns (bool) {
-        return PaymentLib.canPay(euroTokenAddress, customer, amount);
+        return PaymentLib.canPay(EURO_TOKEN_ADDRESS, customer, amount);
     }
 }

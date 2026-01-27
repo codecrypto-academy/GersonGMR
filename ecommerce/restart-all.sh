@@ -35,9 +35,13 @@ if [ ! -d "stablecoin" ] || [ ! -d "sc-ecommerce" ]; then
     exit 1
 fi
 
-# Verificar que Foundry está instalado
+# Verificar que Foundry (forge, cast, anvil) está instalado
 if ! command -v forge &> /dev/null; then
     print_error "Foundry no está instalado. Por favor instálalo desde https://book.getfoundry.sh/getting-started/installation"
+    exit 1
+fi
+if ! command -v anvil &> /dev/null; then
+    print_error "Anvil no encontrado. Ejecuta 'foundryup' para actualizar Foundry."
     exit 1
 fi
 
@@ -47,33 +51,36 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
-# Verificar que Anvil no está corriendo
-if lsof -Pi :8545 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    print_warning "Anvil ya está corriendo en el puerto 8545"
-    read -p "¿Deseas detenerlo y continuar? (y/n) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        pkill -f anvil || true
-        sleep 2
-    else
-        print_error "Abortando..."
+# Función para verificar si Anvil está respondiendo (portable: Linux, Mac, Windows/Git Bash)
+anvil_responding() {
+    cast block-number --rpc-url http://localhost:8545 2>/dev/null && return 0
+    return 1
+}
+
+# 1. Asegurar que Anvil está corriendo
+if anvil_responding; then
+    print_info "Anvil ya está corriendo en el puerto 8545. Continuando..."
+else
+    print_info "Iniciando Anvil (blockchain local)..."
+    ANVIL_LOG="anvil.log"
+    anvil --host 127.0.0.1 --port 8545 > "$ANVIL_LOG" 2>&1 &
+    ANVIL_PID=$!
+    sleep 5
+
+    if ! anvil_responding; then
+        print_error "No se pudo iniciar Anvil. Últimas líneas de $ANVIL_LOG:"
+        echo "---"
+        tail -20 "$ANVIL_LOG" 2>/dev/null || cat "$ANVIL_LOG" 2>/dev/null
+        echo "---"
+        echo ""
+        print_warning "En Windows/Git Bash, inicia Anvil manualmente en OTRA terminal:"
+        echo "  anvil --host 127.0.0.1 --port 8545"
+        echo ""
+        print_warning "Cuando Anvil esté corriendo, vuelve a ejecutar: ./restart-all.sh"
         exit 1
     fi
+    print_info "Anvil iniciado (PID: $ANVIL_PID)"
 fi
-
-# 1. Iniciar Anvil (blockchain local)
-print_info "Iniciando Anvil (blockchain local)..."
-anvil --host 0.0.0.0 --port 8545 > anvil.log 2>&1 &
-ANVIL_PID=$!
-sleep 3
-
-# Verificar que Anvil está corriendo
-if ! lsof -Pi :8545 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    print_error "No se pudo iniciar Anvil"
-    exit 1
-fi
-
-print_info "Anvil iniciado (PID: $ANVIL_PID)"
 
 # Configurar variable de entorno para private key (primera cuenta de Anvil)
 export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
@@ -85,7 +92,7 @@ cd stablecoin/sc
 # Instalar dependencias si es necesario
 if [ ! -d "lib" ]; then
     print_info "Instalando dependencias de Foundry..."
-    forge install OpenZeppelin/openzeppelin-contracts --no-commit
+    forge install OpenZeppelin/openzeppelin-contracts
 fi
 
 # Compilar contratos
@@ -111,7 +118,7 @@ cd sc-ecommerce
 # Instalar dependencias si es necesario
 if [ ! -d "lib" ]; then
     print_info "Instalando dependencias de Foundry..."
-    forge install OpenZeppelin/openzeppelin-contracts --no-commit
+    forge install OpenZeppelin/openzeppelin-contracts
 fi
 
 # Compilar contratos
@@ -179,17 +186,28 @@ fi
 
 # 5. Instalar dependencias de las aplicaciones Next.js
 print_info "Instalando dependencias de las aplicaciones Next.js..."
+ECOMMERCE_ROOT="$(pwd)"
 
 for app in stablecoin/compra-stablecoin stablecoin/pasarela-de-pago web-admin web-customer; do
+    cd "$ECOMMERCE_ROOT"
     if [ -d "$app" ]; then
         print_info "Instalando dependencias para $app..."
         cd "$app"
-        if [ ! -d "node_modules" ]; then
-            npm install
+        if [ ! -f "package.json" ]; then
+            print_warning "No se encontró package.json en $app, saltando..."
+            continue
         fi
-        cd ../..
+        # Instalar dependencias (si node_modules no existe o si package.json fue modificado)
+        if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules" ]; then
+            npm install
+        else
+            print_info "Dependencias ya instaladas para $app"
+        fi
+    else
+        print_warning "Directorio $app no encontrado, saltando..."
     fi
 done
+cd "$ECOMMERCE_ROOT"
 
 # 6. Mostrar resumen
 echo ""
@@ -213,6 +231,9 @@ echo "  cd stablecoin/pasarela-de-pago && npm run dev"
 echo "  cd web-admin && npm run dev"
 echo "  cd web-customer && npm run dev"
 echo ""
-print_info "Anvil está corriendo en segundo plano (PID: $ANVIL_PID)"
-print_info "Para detener Anvil, ejecuta: kill $ANVIL_PID"
+if [ -n "$ANVIL_PID" ]; then
+    print_info "Anvil está en segundo plano (PID: $ANVIL_PID). Para detener: kill $ANVIL_PID"
+else
+    print_info "Anvil está en http://localhost:8545 (lo iniciaste en otra terminal)"
+fi
 echo ""

@@ -16,12 +16,7 @@ deduplicate = true
 cse = true
 constantOptimizer = true
 yul = true
-yulDetails = {
-    stackAllocation = true
-}
+yulDetails = { stackAllocation = true }
 
 [rpc_endpoints]
 anvil = "http://localhost:8545"
-
-[etherscan]
-localhost = { url = "http://localhost:8545" }

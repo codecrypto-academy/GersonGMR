@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {EuroToken} from "../src/EuroToken.sol";
 
 contract EuroTokenTest is Test {
@@ -20,7 +20,7 @@ contract EuroTokenTest is Test {
         token = new EuroToken(owner);
     }
 
-    function test_Deploy() public {
+    function test_Deploy() public view {
         assertEq(token.name(), "EuroToken");
         assertEq(token.symbol(), "EURT");
         assertEq(token.decimals(), 6);
@@ -64,7 +64,8 @@ contract EuroTokenTest is Test {
         token.mint(user1, amount);
         
         vm.prank(user1);
-        token.transfer(user2, amount);
+        bool success = token.transfer(user2, amount);
+        assertTrue(success);
         
         assertEq(token.balanceOf(user1), 0);
         assertEq(token.balanceOf(user2), amount);
@@ -90,7 +91,7 @@ contract EuroTokenTest is Test {
         token.burn(user1, amount);
     }
 
-    function test_Decimals() public {
+    function test_Decimals() public view {
         assertEq(token.decimals(), 6);
     }
 

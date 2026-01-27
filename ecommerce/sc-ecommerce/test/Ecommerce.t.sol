@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {Ecommerce} from "../src/Ecommerce.sol";
-import {EuroToken} from "../../stablecoin/sc/src/EuroToken.sol";
+import {EuroToken} from "eurotoken/EuroToken.sol";
 import {CompanyLib} from "../src/CompanyLib.sol";
 import {ProductLib} from "../src/ProductLib.sol";
 import {CartLib} from "../src/CartLib.sol";
@@ -75,7 +75,7 @@ contract EcommerceTest is Test {
         uint256 productId = ecommerce.addProduct(
             companyId,
             "Producto A",
-            "Descripción del producto",
+            "Descripcion del producto",
             10 * 10**6, // 10 EURT
             100, // stock
             "QmHash123"
