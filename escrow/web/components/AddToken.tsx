@@ -14,6 +14,7 @@ export default function AddToken() {
   const { escrowContract, getTokenContract, account } = useEthereum()
   const [tokenAddress, setTokenAddress] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [removingToken, setRemovingToken] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [allowedTokens, setAllowedTokens] = useState<TokenInfo[]>([])
   const [isOwner, setIsOwner] = useState(false)
@@ -115,6 +116,31 @@ export default function AddToken() {
     }
   }
 
+  const handleRemoveToken = async (tokenAddr: string) => {
+    if (!escrowContract) return
+
+    setRemovingToken(tokenAddr)
+    setMessage(null)
+
+    try {
+      const tx = await escrowContract.removeToken(tokenAddr)
+      await tx.wait()
+
+      setMessage({ type: 'success', text: 'Token removido exitosamente!' })
+      loadTokens()
+    } catch (err: unknown) {
+      console.error('Error removing token:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
+      if (errorMessage.includes('not the owner')) {
+        setMessage({ type: 'error', text: 'Solo el owner puede remover tokens' })
+      } else {
+        setMessage({ type: 'error', text: 'Error al remover token' })
+      }
+    } finally {
+      setRemovingToken(null)
+    }
+  }
+
   const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
 
   return (
@@ -174,8 +200,29 @@ export default function AddToken() {
             {allowedTokens.map((token) => (
               <li key={token.address} className="p-3 bg-gray-700 rounded-lg">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-white">{token.symbol}</span>
-                  <span className="text-sm text-gray-400">{token.name}</span>
+                  <div>
+                    <span className="font-medium text-white">{token.symbol}</span>
+                    <span className="text-sm text-gray-400 ml-2">{token.name}</span>
+                  </div>
+                  {isOwner && (
+                    <button
+                      onClick={() => handleRemoveToken(token.address)}
+                      disabled={removingToken === token.address}
+                      className="text-red-400 hover:text-red-300 disabled:text-gray-500 text-sm px-2 py-1 rounded transition-colors"
+                      title="Remover token"
+                    >
+                      {removingToken === token.address ? (
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
                 </div>
                 <p className="text-xs text-gray-500 font-mono mt-1">{formatAddress(token.address)}</p>
               </li>
